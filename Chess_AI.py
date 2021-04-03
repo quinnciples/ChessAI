@@ -56,39 +56,148 @@ class Board:
             moves = []
             # White: -8, -16
             # Black: 8, 16
-            if board[pawnLocation] & Piece.WHITE:
+            if pawnLocation > 7 and board[pawnLocation] & Piece.WHITE:
                 if board[pawnLocation] & Piece.MOVED == 0:
                     new_board = [p for p in board]
                     piece = new_board[pawnLocation] | Piece.MOVED
                     new_board[pawnLocation] = None
                     new_board[pawnLocation - 16] = piece
                     moves.append(new_board)
-                    # Board.print(new_board)
+                    Board.print(new_board)
                 new_board = [p for p in board]
                 piece = new_board[pawnLocation] | Piece.MOVED
                 new_board[pawnLocation] = None
                 new_board[pawnLocation - 8] = piece
                 moves.append(new_board)
-                # Board.print(new_board)
-            elif board[pawnLocation] & Piece.BLACK:
-                pass
+                Board.print(new_board)
+            elif pawnLocation < 55 and board[pawnLocation] & Piece.BLACK:
+                if board[pawnLocation] & Piece.MOVED == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[pawnLocation] | Piece.MOVED
+                    new_board[pawnLocation] = None
+                    new_board[pawnLocation + 16] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+                new_board = [p for p in board]
+                piece = new_board[pawnLocation] | Piece.MOVED
+                new_board[pawnLocation] = None
+                new_board[pawnLocation + 8] = piece
+                moves.append(new_board)
+                Board.print(new_board)
+            return moves
+
+        def handleKnightMoves(board, knightLocation):
+            moves = []
+            piece_color = board[knightLocation] & (Piece.BLACK | Piece.WHITE)
+            rank = (7 - (knightLocation // 8)) + 1
+            file = (knightLocation % 8) + 1
+            # knightLocation % 8 - number of spaces away from left side
+            # 7 - (knightLocation % 8) - number of spaces away from right side
+            # knightLocation // 8 - number of spaces away from bottom side
+            # 7 - (knightLocation // 8) - number of spaces away from top side
+
+            # Up 1 Left 2 = -10
+            if rank <= 7 and file >= 3:
+                movement = -10
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+            # Up 2 Left 1 = -17
+            if rank <= 6 and file >= 2:
+                movement = -17
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+            # Up 1 Right 2 = -6
+            if rank <= 7 and file <= 6:
+                movement = -6
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+            # Up 2 Right 1 = -15
+            if rank <= 6 and file <= 7:
+                movement = -15
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+            # Down 1 Left 2 = +6
+            if rank >= 2 and file >= 3:
+                movement = 6
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+            # Down 2 Left 1 = 15
+            if rank >= 3 and file >= 2:
+                movement = 15
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+            # Down 1 Right 2 = 10
+            if rank >= 2 and file <= 6:
+                movement = 10
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
+            # Down 2 Right 1 = +17
+            if rank >= 3 and file <= 7:
+                movement = 17
+                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[knightLocation] | Piece.MOVED
+                    new_board[knightLocation] = None
+                    new_board[knightLocation + movement] = piece
+                    moves.append(new_board)
+                    Board.print(new_board)
             return moves
 
         moves = []
+        piece_moves = []
         positions_to_move = []
         for position, piece in enumerate(self.board):
             if not piece or not (piece & color):
                 continue
             positions_to_move.append(position)
-        print(positions_to_move)
+        logging.debug(f'Need to handle these positions: {positions_to_move}')
 
         for board_position in positions_to_move:
             piece = self.board[board_position]
             if piece & Piece.PAWN:
-                pawn_moves = handlePawnMoves(self.board, board_position)
-                for move in pawn_moves:
+                piece_moves = handlePawnMoves(self.board, board_position)
+                for move in piece_moves:
                     moves.append(move)
-        
+            elif piece & Piece.KNIGHT:
+                piece_moves = handleKnightMoves(self.board, board_position)
+                for move in piece_moves:
+                    moves.append(move)
+
         logging.info(f'Number of moves generated: {len(moves)}')
 
     def getFENString(self) -> str:
@@ -135,7 +244,7 @@ class Board:
                 else:
                     this_piece = this_piece[1].upper()
                 board += this_piece
-        fen += board 
+        fen += board
         fen += ' '
         color = 'w' if self.active_color & Piece.WHITE else 'b'
         fen += color
@@ -232,12 +341,12 @@ def main():
 
     b = Board()
     b.reset()
-    Board.print(b.board)
-    print()
-    print(b.getFENString())
+    # Board.print(b.board)
+    # print()
+    # print(b.getFENString())
     print()
     b.generateValidMoves(Piece.WHITE)
-    # b.generateValidMoves(Piece.BLACK)
+    b.generateValidMoves(Piece.BLACK)
 
 
 if __name__ == '__main__':
