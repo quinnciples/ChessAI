@@ -1,6 +1,6 @@
 import logging
 from mariadb_handler import MariaDBHandler
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -42,18 +42,54 @@ class Board:
         self.board[59] = Piece.QUEEN | Piece.WHITE
         self.board[60] = Piece.KING | Piece.WHITE
 
-    def print(self) -> None:
+    @staticmethod
+    def print(board) -> None:
         print('-' * 41)
-        for idx, piece in enumerate(self.board):
+        for idx, piece in enumerate(board):
             print('| ' + Piece.getPieceType(piece) + ' ', end='')
             if (idx + 1) % 8 == 0:
                 print('|')
                 print('-' * 41)
 
     def generateValidMoves(self, color: int) -> list:
+        def handlePawnMoves(board, pawnLocation):
+            moves = []
+            # White: -8, -16
+            # Black: 8, 16
+            if board[pawnLocation] & Piece.WHITE:
+                if board[pawnLocation] & Piece.MOVED == 0:
+                    new_board = [p for p in board]
+                    piece = new_board[pawnLocation] | Piece.MOVED
+                    new_board[pawnLocation] = None
+                    new_board[pawnLocation - 16] = piece
+                    moves.append(new_board)
+                    # Board.print(new_board)
+                new_board = [p for p in board]
+                piece = new_board[pawnLocation] | Piece.MOVED
+                new_board[pawnLocation] = None
+                new_board[pawnLocation - 8] = piece
+                moves.append(new_board)
+                # Board.print(new_board)
+            elif board[pawnLocation] & Piece.BLACK:
+                pass
+            return moves
+
+        moves = []
+        positions_to_move = []
         for position, piece in enumerate(self.board):
-            if not (piece & color):
+            if not piece or not (piece & color):
                 continue
+            positions_to_move.append(position)
+        print(positions_to_move)
+
+        for board_position in positions_to_move:
+            piece = self.board[board_position]
+            if piece & Piece.PAWN:
+                pawn_moves = handlePawnMoves(self.board, board_position)
+                for move in pawn_moves:
+                    moves.append(move)
+        
+        logging.info(f'Number of moves generated: {len(moves)}')
 
     def getFENString(self) -> str:
         def determineCastling(board) -> str:
@@ -79,17 +115,18 @@ class Board:
             return castling
 
         fen = ''
+        board = ''
         empty = 0
         for position, piece in enumerate(self.board):
             if position % 8 == 0 and position > 0:
                 if empty:
-                    fen += str(empty)
+                    board += str(empty)
                     empty = 0
-                fen += '/'
+                board += '/'
             if piece is None:
                 empty += 1
             elif empty > 0:
-                fen += str(empty)
+                board += str(empty)
                 empty = 0
             else:
                 this_piece = Piece.getPieceType(piece)
@@ -97,11 +134,14 @@ class Board:
                     this_piece = this_piece[1].lower()
                 else:
                     this_piece = this_piece[1].upper()
-                fen += this_piece
+                board += this_piece
+        fen += board 
         fen += ' '
-        fen += 'w' if self.active_color & Piece.WHITE else 'b'
+        color = 'w' if self.active_color & Piece.WHITE else 'b'
+        fen += color
         fen += ' '
-        fen += determineCastling(self.board)
+        castling = determineCastling(self.board)
+        fen += castling
         fen += ' '
         # En Passant
         fen += '-'
@@ -111,6 +151,8 @@ class Board:
         fen += ' '
         # Full moves
         fen += str(self.fullmoves)
+
+        logging.debug(f'{self.board} translated to {fen}')
         return fen
 
     @staticmethod
@@ -190,9 +232,12 @@ def main():
 
     b = Board()
     b.reset()
-    b.print()
+    Board.print(b.board)
     print()
     print(b.getFENString())
+    print()
+    b.generateValidMoves(Piece.WHITE)
+    # b.generateValidMoves(Piece.BLACK)
 
 
 if __name__ == '__main__':
