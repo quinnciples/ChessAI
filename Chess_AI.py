@@ -15,6 +15,9 @@ logging.info('Loaded.')
 class Board:
     def __init__(self) -> None:
         self.board = [None] * 64
+        self.active_color = Piece.WHITE
+        self.halfmoves = 0
+        self.fullmoves = 1
 
     def reset(self) -> None:
         for column in range(1, 9):
@@ -46,8 +49,69 @@ class Board:
             if (idx + 1) % 8 == 0:
                 print('|')
                 print('-' * 41)
-                # print()
 
+    def generateValidMoves(self, color: int) -> list:
+        for position, piece in enumerate(self.board):
+            if not (piece & color):
+                continue
+
+    def getFENString(self) -> str:
+        def determineCastling(board) -> str:
+            castling = ''
+            # White
+            if board[63] & Piece.MOVED == 0 and board[63] & Piece.ROOK and board[63] & Piece.WHITE and board[60] & Piece.MOVED == 0 and board[60] & Piece.KING and board[60] & Piece.WHITE:
+                castling += 'K'
+            else:
+                castling += ' '
+            if board[56] & Piece.MOVED == 0 and board[56] & Piece.ROOK and board[56] & Piece.WHITE and board[60] & Piece.MOVED == 0 and board[60] & Piece.KING and board[60] & Piece.WHITE:
+                castling += 'Q'
+            else:
+                castling += ' '
+            # Black
+            if board[7] & Piece.MOVED == 0 and board[7] & Piece.ROOK and board[7] & Piece.BLACK and board[4] & Piece.MOVED == 0 and board[4] & Piece.KING and board[4] & Piece.BLACK:
+                castling += 'k'
+            else:
+                castling += ' '
+            if board[0] & Piece.MOVED == 0 and board[0] & Piece.ROOK and board[0] & Piece.BLACK and board[4] & Piece.MOVED == 0 and board[4] & Piece.KING and board[4] & Piece.BLACK:
+                castling += 'q'
+            else:
+                castling += ' '
+            return castling
+
+        fen = ''
+        empty = 0
+        for position, piece in enumerate(self.board):
+            if position % 8 == 0 and position > 0:
+                if empty:
+                    fen += str(empty)
+                    empty = 0
+                fen += '/'
+            if piece is None:
+                empty += 1
+            elif empty > 0:
+                fen += str(empty)
+                empty = 0
+            else:
+                this_piece = Piece.getPieceType(piece)
+                if this_piece[0] == 'B':
+                    this_piece = this_piece[1].lower()
+                else:
+                    this_piece = this_piece[1].upper()
+                fen += this_piece
+        fen += ' '
+        fen += 'w' if self.active_color & Piece.WHITE else 'b'
+        fen += ' '
+        fen += determineCastling(self.board)
+        fen += ' '
+        # En Passant
+        fen += '-'
+        fen += ' '
+        # Half moves
+        fen += str(self.halfmoves)
+        fen += ' '
+        # Full moves
+        fen += str(self.fullmoves)
+        return fen
 
     @staticmethod
     def translatePos(row: int = 1, column: int = 1) -> int:
@@ -127,6 +191,8 @@ def main():
     b = Board()
     b.reset()
     b.print()
+    print()
+    print(b.getFENString())
 
 
 if __name__ == '__main__':
