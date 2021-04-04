@@ -14,10 +14,17 @@ logging.info('Loaded.')
 
 class Board:
     def __init__(self) -> None:
+        self.clear()
+        self.reset()
+
+    @classmethod
+    def fromBoard(cls, board):
+        new_board = cls()
+        new_board.board = board
+        return new_board
+
+    def clear(self) -> None:
         self.board = [None] * 64
-        self.active_color = Piece.WHITE
-        self.halfmoves = 0
-        self.fullmoves = 1
 
     def reset(self) -> None:
         for column in range(1, 9):
@@ -42,16 +49,21 @@ class Board:
         self.board[59] = Piece.QUEEN | Piece.WHITE
         self.board[60] = Piece.KING | Piece.WHITE
 
-    @staticmethod
-    def print(board) -> None:
+        self.halfmoves = 0
+        self.fullmoves = 1
+        self.active_color = Piece.WHITE
+
+    def print(self) -> None:
         print('-' * 41)
-        for idx, piece in enumerate(board):
+        for idx, piece in enumerate(self.board):
             print('| ' + Piece.getPieceType(piece) + ' ', end='')
             if (idx + 1) % 8 == 0:
-                print('|')
+                print(f'| {8 - ((idx // 8))}')
                 print('-' * 41)
+        print('- A -- B -- C -- D -- E -- F -- G -- H -')
+        print()
 
-    def generateValidMoves(self, color: int) -> list:
+    def generateValidMoves(self, color) -> list:
         def handlePawnMoves(board, pawnLocation):
             moves = []
             # White: -8, -16
@@ -62,28 +74,54 @@ class Board:
                     piece = new_board[pawnLocation] | Piece.MOVED
                     new_board[pawnLocation] = None
                     new_board[pawnLocation - 16] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
-                new_board = [p for p in board]
-                piece = new_board[pawnLocation] | Piece.MOVED
-                new_board[pawnLocation] = None
-                new_board[pawnLocation - 8] = piece
-                moves.append(new_board)
-                Board.print(new_board)
-            elif pawnLocation < 55 and board[pawnLocation] & Piece.BLACK:
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
+                if pawnLocation - 8 < 8:
+                    # Handle promotion
+                    for promoted_piece in (Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN):
+                        new_board = [p for p in board]
+                        piece = promoted_piece | Piece.MOVED | Piece.WHITE
+                        new_board[pawnLocation] = None
+                        new_board[pawnLocation - 8] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                else:
+                    new_board = [p for p in board]
+                    piece = new_board[pawnLocation] | Piece.MOVED
+                    new_board[pawnLocation] = None
+                    new_board[pawnLocation - 8] = piece
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
+            elif pawnLocation < 56 and board[pawnLocation] & Piece.BLACK:
                 if board[pawnLocation] & Piece.MOVED == 0:
                     new_board = [p for p in board]
                     piece = new_board[pawnLocation] | Piece.MOVED
                     new_board[pawnLocation] = None
                     new_board[pawnLocation + 16] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
-                new_board = [p for p in board]
-                piece = new_board[pawnLocation] | Piece.MOVED
-                new_board[pawnLocation] = None
-                new_board[pawnLocation + 8] = piece
-                moves.append(new_board)
-                Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
+                if pawnLocation + 8 > 55:
+                    # Handle promotion
+                    for promoted_piece in (Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN):
+                        new_board = [p for p in board]
+                        piece = promoted_piece | Piece.MOVED | Piece.BLACK
+                        new_board[pawnLocation] = None
+                        new_board[pawnLocation + 8] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                else:
+                    new_board = [p for p in board]
+                    piece = new_board[pawnLocation] | Piece.MOVED
+                    new_board[pawnLocation] = None
+                    new_board[pawnLocation + 8] = piece
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             return moves
 
         def handleKnightMoves(board, knightLocation):
@@ -104,8 +142,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             # Up 2 Left 1 = -17
             if rank <= 6 and file >= 2:
                 movement = -17
@@ -114,8 +153,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             # Up 1 Right 2 = -6
             if rank <= 7 and file <= 6:
                 movement = -6
@@ -124,8 +164,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             # Up 2 Right 1 = -15
             if rank <= 6 and file <= 7:
                 movement = -15
@@ -134,8 +175,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             # Down 1 Left 2 = +6
             if rank >= 2 and file >= 3:
                 movement = 6
@@ -144,8 +186,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             # Down 2 Left 1 = 15
             if rank >= 3 and file >= 2:
                 movement = 15
@@ -154,8 +197,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             # Down 1 Right 2 = 10
             if rank >= 2 and file <= 6:
                 movement = 10
@@ -164,8 +208,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             # Down 2 Right 1 = +17
             if rank >= 3 and file <= 7:
                 movement = 17
@@ -174,8 +219,9 @@ class Board:
                     piece = new_board[knightLocation] | Piece.MOVED
                     new_board[knightLocation] = None
                     new_board[knightLocation + movement] = piece
-                    moves.append(new_board)
-                    Board.print(new_board)
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             return moves
 
         moves = []
@@ -199,6 +245,7 @@ class Board:
                     moves.append(move)
 
         logging.info(f'Number of moves generated: {len(moves)}')
+        return moves
 
     def getFENString(self) -> str:
         def determineCastling(board) -> str:
@@ -329,24 +376,27 @@ class Piece:
 
 
 def main():
-    p = Piece()
-    colors = [128, 256]
-    for col in colors:
-        for piece in range(1, 7):
-            p.value = (2 ** piece) + col
-            print(p.value, Piece.getPieceType(p.value))
+    # p = Piece()
+    # colors = [128, 256]
+    # for col in colors:
+    #     for piece in range(1, 7):
+    #         p.value = (2 ** piece) + col
+    #         print(p.value, Piece.getPieceType(p.value))
 
-    print()
-    print()
-
-    b = Board()
-    b.reset()
-    # Board.print(b.board)
     # print()
-    # print(b.getFENString())
+    # print()
+
+    # b = Board()
+    # b.reset()
+    # print()
+    # b.generateValidMoves(color=Piece.WHITE)
+    # b.generateValidMoves(color=Piece.BLACK)
     print()
+    b = Board()
+    b.clear()
+    b.board[8] = Piece.PAWN | Piece.WHITE | Piece.MOVED
+    b.print()
     b.generateValidMoves(Piece.WHITE)
-    b.generateValidMoves(Piece.BLACK)
 
 
 if __name__ == '__main__':
