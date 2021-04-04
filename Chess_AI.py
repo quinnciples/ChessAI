@@ -124,6 +124,68 @@ class Board:
                     b.print()
             return moves
 
+        def handleRookMoves(board, rookLocation):
+            moves = []
+            piece_color = board[rookLocation] & (Piece.BLACK | Piece.WHITE)
+            rank = (7 - (rookLocation // 8)) + 1
+            file = (rookLocation % 8) + 1
+
+            # Left
+            for leftOffset in range(1, 8):
+                if (rookLocation - leftOffset) % 8 < rookLocation % 8:
+                    if board[rookLocation - leftOffset] is None or (board[rookLocation - leftOffset] and board[rookLocation - leftOffset] & piece_color == 0):
+                        new_board = [p for p in board]
+                        piece = new_board[rookLocation] | Piece.MOVED
+                        new_board[rookLocation] = None
+                        new_board[rookLocation - leftOffset] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                    if board[rookLocation - leftOffset]:
+                        break
+            # Right
+            for rightOffset in range(1, 8):
+                if (rookLocation + rightOffset) % 8 > rookLocation % 8:
+                    if board[rookLocation + rightOffset] is None or (board[rookLocation + rightOffset] and board[rookLocation + rightOffset] & piece_color == 0):
+                        new_board = [p for p in board]
+                        piece = new_board[rookLocation] | Piece.MOVED
+                        new_board[rookLocation] = None
+                        new_board[rookLocation + rightOffset] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                    if board[rookLocation + rightOffset]:
+                        break
+            # Up
+            for upOffset in range(1, 8):
+                if (rookLocation - (8 * upOffset)) > 0:
+                    if board[rookLocation - (8 * upOffset)] is None or (board[rookLocation - (8 * upOffset)] and board[rookLocation - (8 * upOffset)] & piece_color == 0):
+                        new_board = [p for p in board]
+                        piece = new_board[rookLocation] | Piece.MOVED
+                        new_board[rookLocation] = None
+                        new_board[rookLocation - (8 * upOffset)] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                    if board[rookLocation - (8 * upOffset)]:
+                        break
+            # Down
+            for downOffset in range(1, 8):
+                if (rookLocation + (8 * downOffset)) < 64:
+                    if board[rookLocation + (8 * downOffset)] is None or (board[rookLocation + (8 * downOffset)] and board[rookLocation + (8 * downOffset)] & piece_color == 0):
+                        new_board = [p for p in board]
+                        piece = new_board[rookLocation] | Piece.MOVED
+                        new_board[rookLocation] = None
+                        new_board[rookLocation + (8 * downOffset)] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                    if board[rookLocation + (8 * downOffset)]:
+                        break
+            return moves
+
+
+
         def handleKnightMoves(board, knightLocation):
             moves = []
             piece_color = board[knightLocation] & (Piece.BLACK | Piece.WHITE)
@@ -235,12 +297,17 @@ class Board:
 
         for board_position in positions_to_move:
             piece = self.board[board_position]
+            piece_moves = []
             if piece & Piece.PAWN:
                 piece_moves = handlePawnMoves(self.board, board_position)
                 for move in piece_moves:
                     moves.append(move)
             elif piece & Piece.KNIGHT:
                 piece_moves = handleKnightMoves(self.board, board_position)
+                for move in piece_moves:
+                    moves.append(move)
+            elif piece & Piece.ROOK:
+                piece_moves = handleRookMoves(self.board, board_position)
                 for move in piece_moves:
                     moves.append(move)
 
@@ -394,7 +461,11 @@ def main():
     print()
     b = Board()
     b.clear()
-    b.board[8] = Piece.PAWN | Piece.WHITE | Piece.MOVED
+    b.board[36] = Piece.ROOK | Piece.WHITE | Piece.MOVED
+    b.board[33] = Piece.PAWN | Piece.WHITE | Piece.MOVED
+    b.board[38] = Piece.PAWN | Piece.WHITE | Piece.MOVED
+    b.board[20] = Piece.PAWN | Piece.WHITE | Piece.MOVED
+    b.board[52] = Piece.PAWN | Piece.WHITE | Piece.MOVED
     b.print()
     b.generateValidMoves(Piece.WHITE)
 
