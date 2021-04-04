@@ -63,7 +63,7 @@ class Board:
         print('- A -- B -- C -- D -- E -- F -- G -- H -')
         print()
 
-    def generateValidMoves(self, color: int) -> list:
+    def generateValidMoves(self, color) -> list:
         def handlePawnMoves(board, pawnLocation):
             moves = []
             # White: -8, -16
@@ -77,14 +77,25 @@ class Board:
                     b = Board.fromBoard(board=new_board)
                     moves.append(b)
                     b.print()
-                new_board = [p for p in board]
-                piece = new_board[pawnLocation] | Piece.MOVED
-                new_board[pawnLocation] = None
-                new_board[pawnLocation - 8] = piece
-                b = Board.fromBoard(board=new_board)
-                moves.append(b)
-                b.print()
-            elif pawnLocation < 55 and board[pawnLocation] & Piece.BLACK:
+                if pawnLocation - 8 < 8:
+                    # Handle promotion
+                    for promoted_piece in (Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN):
+                        new_board = [p for p in board]
+                        piece = promoted_piece | Piece.MOVED | Piece.WHITE
+                        new_board[pawnLocation] = None
+                        new_board[pawnLocation - 8] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                else:
+                    new_board = [p for p in board]
+                    piece = new_board[pawnLocation] | Piece.MOVED
+                    new_board[pawnLocation] = None
+                    new_board[pawnLocation - 8] = piece
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
+            elif pawnLocation < 56 and board[pawnLocation] & Piece.BLACK:
                 if board[pawnLocation] & Piece.MOVED == 0:
                     new_board = [p for p in board]
                     piece = new_board[pawnLocation] | Piece.MOVED
@@ -93,13 +104,24 @@ class Board:
                     b = Board.fromBoard(board=new_board)
                     moves.append(b)
                     b.print()
-                new_board = [p for p in board]
-                piece = new_board[pawnLocation] | Piece.MOVED
-                new_board[pawnLocation] = None
-                new_board[pawnLocation + 8] = piece
-                b = Board.fromBoard(board=new_board)
-                moves.append(b)
-                b.print()
+                if pawnLocation + 8 > 55:
+                    # Handle promotion
+                    for promoted_piece in (Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN):
+                        new_board = [p for p in board]
+                        piece = promoted_piece | Piece.MOVED | Piece.BLACK
+                        new_board[pawnLocation] = None
+                        new_board[pawnLocation + 8] = piece
+                        b = Board.fromBoard(board=new_board)
+                        moves.append(b)
+                        b.print()
+                else:
+                    new_board = [p for p in board]
+                    piece = new_board[pawnLocation] | Piece.MOVED
+                    new_board[pawnLocation] = None
+                    new_board[pawnLocation + 8] = piece
+                    b = Board.fromBoard(board=new_board)
+                    moves.append(b)
+                    b.print()
             return moves
 
         def handleKnightMoves(board, knightLocation):
@@ -354,39 +376,27 @@ class Piece:
 
 
 def main():
-    p = Piece()
-    colors = [128, 256]
-    for col in colors:
-        for piece in range(1, 7):
-            p.value = (2 ** piece) + col
-            print(p.value, Piece.getPieceType(p.value))
+    # p = Piece()
+    # colors = [128, 256]
+    # for col in colors:
+    #     for piece in range(1, 7):
+    #         p.value = (2 ** piece) + col
+    #         print(p.value, Piece.getPieceType(p.value))
 
-    print()
-    print()
-
-    b = Board()
-    b.reset()
-    # Board.print(b.board)
     # print()
-    # print(b.getFENString())
-    print()
-    b.generateValidMoves(Piece.WHITE)
-    b.generateValidMoves(Piece.BLACK)
+    # print()
+
+    # b = Board()
+    # b.reset()
+    # print()
+    # b.generateValidMoves(color=Piece.WHITE)
+    # b.generateValidMoves(color=Piece.BLACK)
     print()
     b = Board()
     b.clear()
-    b.board[8] = Piece.PAWN | Piece.BLACK
+    b.board[8] = Piece.PAWN | Piece.WHITE | Piece.MOVED
     b.print()
-    set_done = list()
-    set_pending = [brd.board for brd in b.generateValidMoves(Piece.BLACK)]
-    while set_pending:
-        next_board = set_pending.pop()
-        next_results = Board.fromBoard(next_board).generateValidMoves(Piece.BLACK)
-        for result in next_results:
-            if result.board not in set_done and result.board not in set_pending:
-                set_pending.append(result.board)
-        set_done.append(next_board)
-    print(len(set_done))
+    b.generateValidMoves(Piece.WHITE)
 
 
 if __name__ == '__main__':
