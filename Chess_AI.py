@@ -66,8 +66,6 @@ class Board:
     def generateValidMoves(self, color) -> list:
         def handlePawnMoves(board, pawnLocation):
             moves = []
-            # White: -8, -16
-            # Black: 8, 16
             if pawnLocation > 7 and board[pawnLocation] & Piece.WHITE:
                 if board[pawnLocation] & Piece.MOVED == 0:
                     new_board = [p for p in board]
