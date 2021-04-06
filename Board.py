@@ -58,11 +58,35 @@ class Board:
         print('- A -- B -- C -- D -- E -- F -- G -- H -')
         print()
 
+    def isCheckForColor(self, color) -> bool:
+        # Find King on board
+        for board_index in range(64):
+            if self.board[board_index] is not None and self.board[board_index] & color and self.board[board_index] & Piece.KING:
+                king_position = board_index
+                break
+        else:
+            Exception('King not found on board.')
+
+        # Run through all possible moves for the opponent, and check if any would capture the King
+        if color & Piece.WHITE:
+            color_to_test = Piece.BLACK
+        elif color & Piece.BLACK:
+            color_to_test = Piece.WHITE
+
+        for board in self.possibleMoveGenerator(color=color_to_test):
+            if board.board[king_position] is not None and (board.board[king_position] & color == 0):
+                return True
+        else:
+            return False
+
     def possibleMoveGenerator(self, color):
         """Need to implement:
                 Pawn capturing
+                En Passant
                 Pawn promotion
                 Castling
+                Pawns can only move 2 spaces on initial move if BOTH spaces are unoccupied
+                Check for checks
 
             Reference https://en.wikipedia.org/wiki/Shannon_number
             for testing
@@ -165,8 +189,6 @@ class Board:
                             new_board.board[king - 2] = new_king
                             new_board.board[rook + 3] = new_rook
                             yield new_board
-
-
 
     def generateValidMoves(self, color) -> list:
         def handlePawnMoves(board, pawnLocation):
