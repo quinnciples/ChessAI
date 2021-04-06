@@ -1,14 +1,18 @@
 import logging
+import configparser
 from mariadb_handler import MariaDBHandler
 from Piece import Piece
 from Board import Board
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
                         logging.FileHandler(filename='log.txt'),
                         logging.StreamHandler(),
-                        MariaDBHandler(username="alexander", password="udder1998", host="pi.hole")
+                        MariaDBHandler(username=config['log']['log_db_user'], password=config['log']['log_db_password'], host="pi.hole")
                     ])
 # logging.disable(level=logging.CRITICAL)
 logging.info('Loaded.')
@@ -25,15 +29,16 @@ def main():
     print()
 
     black_boards = [b]
+    white_boards = []
     for turns in range(2):
-        white_boards = []
+        white_boards.clear()
         for b in black_boards:
             for wb in b.possibleMoveGenerator(Piece.WHITE):
                 if not wb.isCheckForColor(Piece.WHITE):
                     white_boards.append(wb)
         logging.info(f'Turn {turns + 1} for WHITE: {len(white_boards):,}')
 
-        black_boards = []
+        black_boards.clear()
         for b in white_boards:
             for bb in b.possibleMoveGenerator(Piece.BLACK):
                 if not bb.isCheckForColor(Piece.BLACK):
