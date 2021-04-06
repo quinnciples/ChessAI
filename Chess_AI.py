@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG,
                     handlers=[
                         logging.FileHandler(filename='log.txt'),
                         logging.StreamHandler(),
-                        MariaDBHandler(username=config['log']['log_db_user'], password=config['log']['log_db_password'], host="pi.hole")
+                        MariaDBHandler(username=config['log']['log_db_user'], password=config['log']['log_db_password'], host=config['log']['log_db_host'])
                     ])
 # logging.disable(level=logging.CRITICAL)
 logging.info('Loaded.')

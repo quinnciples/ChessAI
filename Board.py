@@ -12,7 +12,7 @@ class Board:
     def __init__(self) -> None:
         self.clear()
         self.reset()
-        self.possible_moves = ml.move_list        
+        self.possible_moves = ml.move_list
 
     @classmethod
     def fromBoard(cls, board):
@@ -80,14 +80,14 @@ class Board:
                 color_to_test = Piece.WHITE
 
             for board in self.possibleMoveGenerator(color=color_to_test):
-                if board.board[king_position] is not None and (board.board[king_position] & color == 0):
+                if board.board[king_position] & color == 0:
                     check_cache[(str(self.board), color)] = True
                     return True
             else:
                 check_cache[(str(self.board), color)] = False
                 return False
 
-    def possibleMoveGenerator(self, color):
+    def possibleMoveGenerator(self, color: int) -> list:
         """Need to implement:
                 Pawn capturing
                 En Passant
@@ -273,8 +273,6 @@ class Board:
         def handleRookMoves(board, rookLocation):
             moves = []
             piece_color = board[rookLocation] & (Piece.BLACK | Piece.WHITE)
-            rank = (7 - (rookLocation // 8)) + 1
-            file = (rookLocation % 8) + 1
 
             # Left
             for leftOffset in range(1, 8):
