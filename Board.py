@@ -112,6 +112,62 @@ class Board:
                             new_board.board[move] = piece
                             yield new_board
 
+                # White Castling
+                if board_index >= 56 and color & Piece.WHITE and self.board[board_index] & Piece.ROOK and self.board[board_index] & Piece.MOVED == 0 and self.board[60] is not None and self.board[60] & Piece.KING and self.board[60] & Piece.WHITE and self.board[60] & Piece.MOVED == 0:
+                    king = 60
+                    rook = board_index
+                    if rook > king:
+                        # King side
+                        if self.board[king + 1] is None and self.board[king + 2] is None:
+                            new_board = Board.fromBoard(board=[p for p in self.board])
+                            new_king = new_board.board[king] | Piece.MOVED
+                            new_rook = new_board.board[rook] | Piece.MOVED
+                            new_board.board[king] = None
+                            new_board.board[rook] = None
+                            new_board.board[king + 2] = new_king
+                            new_board.board[rook - 2] = new_rook
+                            yield new_board
+                    elif rook < king:
+                        # Queen side
+                        if self.board[king - 1] is None and self.board[king - 2] is None:
+                            new_board = Board.fromBoard(board=[p for p in self.board])
+                            new_king = new_board.board[king] | Piece.MOVED
+                            new_rook = new_board.board[rook] | Piece.MOVED
+                            new_board.board[king] = None
+                            new_board.board[rook] = None
+                            new_board.board[king - 2] = new_king
+                            new_board.board[rook + 3] = new_rook
+                            yield new_board
+
+                # Black Castling
+                elif board_index <= 7 and color & Piece.BLACK and self.board[board_index] & Piece.ROOK and self.board[board_index] & Piece.MOVED == 0 and self.board[4] is not None and self.board[4] & Piece.KING and self.board[4] & Piece.BLACK and self.board[4] & Piece.MOVED == 0:
+                    king = 4
+                    rook = board_index
+                    if rook > king:
+                        # King side
+                        if self.board[king + 1] is None and self.board[king + 2] is None:
+                            new_board = Board.fromBoard(board=[p for p in self.board])
+                            new_king = new_board.board[king] | Piece.MOVED
+                            new_rook = new_board.board[rook] | Piece.MOVED
+                            new_board.board[king] = None
+                            new_board.board[rook] = None
+                            new_board.board[king + 2] = new_king
+                            new_board.board[rook - 2] = new_rook
+                            yield new_board
+                    elif rook < king:
+                        # Queen side
+                        if self.board[king - 1] is None and self.board[king - 2] is None:
+                            new_board = Board.fromBoard(board=[p for p in self.board])
+                            new_king = new_board.board[king] | Piece.MOVED
+                            new_rook = new_board.board[rook] | Piece.MOVED
+                            new_board.board[king] = None
+                            new_board.board[rook] = None
+                            new_board.board[king - 2] = new_king
+                            new_board.board[rook + 3] = new_rook
+                            yield new_board
+
+
+
     def generateValidMoves(self, color) -> list:
         def handlePawnMoves(board, pawnLocation):
             moves = []

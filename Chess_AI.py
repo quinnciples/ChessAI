@@ -15,7 +15,7 @@ logging.info('Loaded.')
 
 
 def main():
-    
+
     print()
     print('*' * 13, ' STARTING BOARD ', '*' * 13)
     b = Board()
@@ -48,16 +48,18 @@ def main():
     # 9 	2,439,530,234,167
     # 10 	69,352,859,712,417 
 
-    # b = Board()
-    # b.reset()
-    # b.clear()
-    # b.board[28] = Piece.PAWN | Piece.WHITE | Piece.MOVED
-    # b.board[19] = Piece.PAWN | Piece.BLACK | Piece.MOVED
-    # b.print()
-    # moves = [brd for brd in b.possibleMoveGenerator(Piece.WHITE)]
-    # for brd in moves:
-    #     brd.print()
-    # logging.info(f'{len(moves):,} possibilities')
+    b = Board()
+    b.reset()
+    b.clear()
+    b.board[4] = Piece.KING | Piece.BLACK
+    b.board[0] = Piece.ROOK | Piece.BLACK
+    b.board[7] = Piece.ROOK | Piece.BLACK
+    print('*' * 13, ' CASTLING TEST ', '*' * 13)
+    b.print()
+    moves = [brd for brd in b.possibleMoveGenerator(Piece.BLACK)]
+    for brd in moves:
+        brd.print()
+    logging.info(f'{len(moves):,} possibilities')
 
 
 
