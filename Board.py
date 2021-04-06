@@ -88,11 +88,11 @@ class Board:
                     # Check eligible captures going LEFT
                     if color & Piece.WHITE:
                         offsets = [-9]
-                    else:
+                    elif color & Piece.BLACK:
                         offsets = [7]
                     for offset in offsets:
                         move = board_index + offset
-                        if move > 0 and move < 64 and move % 8 < board_index % 8 and self.board[move] is not None and (self.board[move] & color == 0):
+                        if move >= 0 and move < 64 and move % 8 < board_index % 8 and self.board[move] is not None and (self.board[move] & color == 0):
                             new_board = Board.fromBoard(board=[p for p in self.board])
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
@@ -101,11 +101,11 @@ class Board:
                     # Check eligible captures going RIGHT
                     if color & Piece.WHITE:
                         offsets = [-7]
-                    else:
+                    elif color & Piece.BLACK:
                         offsets = [9]
                     for offset in offsets:
                         move = board_index + offset
-                        if move > 0 and move < 64 and move % 8 > board_index % 8 and self.board[move] is not None and (self.board[move] & color == 0):
+                        if move >= 0 and move < 64 and move % 8 > board_index % 8 and self.board[move] is not None and (self.board[move] & color == 0):
                             new_board = Board.fromBoard(board=[p for p in self.board])
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None

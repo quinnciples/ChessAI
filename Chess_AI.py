@@ -17,10 +17,12 @@ logging.info('Loaded.')
 def main():
     
     print()
-    print('*' * 20, ' STARTING BOARD ', '*' * 20)
+    print('*' * 13, ' STARTING BOARD ', '*' * 13)
     b = Board()
     b.reset()
     b.print()
+    print('*' * 44)
+    print()
 
     black_boards = [b]
     for turns in range(2):
@@ -49,7 +51,8 @@ def main():
     # b = Board()
     # b.reset()
     # b.clear()
-    # b.board[27] = Piece.KING | Piece.WHITE | Piece.MOVED
+    # b.board[28] = Piece.PAWN | Piece.WHITE | Piece.MOVED
+    # b.board[19] = Piece.PAWN | Piece.BLACK | Piece.MOVED
     # b.print()
     # moves = [brd for brd in b.possibleMoveGenerator(Piece.WHITE)]
     # for brd in moves:
