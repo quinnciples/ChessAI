@@ -61,15 +61,14 @@ def main():
     b.board[60] = Piece.KING | Piece.WHITE
     b.board[50] = Piece.KNIGHT | Piece.WHITE
     b.board[48] = Piece.BISHOP | Piece.WHITE
-    b.board[3] = Piece.ROOK | Piece.BLACK
+    b.board[0] = Piece.ROOK | Piece.BLACK
     b.board[4] = Piece.KING | Piece.BLACK
-    b.board[5] = Piece.ROOK | Piece.BLACK
+    b.board[7] = Piece.ROOK | Piece.BLACK
     print('*' * 13, ' CASTLING TEST ', '*' * 13)
     b.print()
-    moves = [brd for brd in b.possibleMoveGenerator(Piece.WHITE) if not brd.isCheckForColor(color=Piece.WHITE)]
+    moves = [brd for brd in b.possibleMoveGenerator(Piece.BLACK) if not brd.isCheckForColor(color=Piece.BLACK)]
     for brd in moves:
         brd.print()
-        print(brd.getFENString())
     logging.info(f'{len(moves):,} possibilities')
 
 

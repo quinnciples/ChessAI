@@ -59,6 +59,8 @@ class Board:
                 print('-' * 41)
         print('- A -- B -- C -- D -- E -- F -- G -- H -')
         print()
+        print(self.getFENString())
+        print()
 
     def isCheckForColor(self, color) -> bool:
         if (str(self.board), color) in check_cache.keys():
@@ -457,23 +459,17 @@ class Board:
         def determineCastling(board) -> str:
             castling = ''
             # White
-            if board[63] and board[63] & Piece.MOVED == 0 and board[63] & Piece.ROOK and board[63] & Piece.WHITE and board[60] & Piece.MOVED == 0 and board[60] & Piece.KING and board[60] & Piece.WHITE:
+            if board[63] and board[60] and board[63] & Piece.MOVED == 0 and board[63] & Piece.ROOK and board[63] & Piece.WHITE and board[60] & Piece.MOVED == 0 and board[60] & Piece.KING and board[60] & Piece.WHITE:
                 castling += 'K'
-            else:
-                castling += ' '
-            if board[56] and board[56] & Piece.MOVED == 0 and board[56] & Piece.ROOK and board[56] & Piece.WHITE and board[60] & Piece.MOVED == 0 and board[60] & Piece.KING and board[60] & Piece.WHITE:
+            if board[56] and board[60] and board[56] & Piece.MOVED == 0 and board[56] & Piece.ROOK and board[56] & Piece.WHITE and board[60] & Piece.MOVED == 0 and board[60] & Piece.KING and board[60] & Piece.WHITE:
                 castling += 'Q'
-            else:
-                castling += ' '
             # Black
-            if board[7] and board[7] & Piece.MOVED == 0 and board[7] & Piece.ROOK and board[7] & Piece.BLACK and board[4] & Piece.MOVED == 0 and board[4] & Piece.KING and board[4] & Piece.BLACK:
+            if board[7] and board[4] and board[7] & Piece.MOVED == 0 and board[7] & Piece.ROOK and board[7] & Piece.BLACK and board[4] & Piece.MOVED == 0 and board[4] & Piece.KING and board[4] & Piece.BLACK:
                 castling += 'k'
-            else:
-                castling += ' '
-            if board[0] and board[0] & Piece.MOVED == 0 and board[0] & Piece.ROOK and board[0] & Piece.BLACK and board[4] & Piece.MOVED == 0 and board[4] & Piece.KING and board[4] & Piece.BLACK:
+            if board[0] and board[4] and board[0] & Piece.MOVED == 0 and board[0] & Piece.ROOK and board[0] & Piece.BLACK and board[4] & Piece.MOVED == 0 and board[4] & Piece.KING and board[4] & Piece.BLACK:
                 castling += 'q'
-            else:
-                castling += ' '
+            if castling == '':
+                castling = '-'
             return castling
 
         fen = ''
