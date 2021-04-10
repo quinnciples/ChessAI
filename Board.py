@@ -110,7 +110,7 @@ class Board:
         moves = []
         for board_index in range(64):
             if self.board[board_index] is not None and self.board[board_index] & color:
-                all_possible_moves = self.possible_moves[(self.board[board_index], board_index)]
+                all_possible_moves = self.possible_moves[(self.board[board_index] & 0b111111110, board_index)]
                 if all_possible_moves:
                     for move_group in all_possible_moves:
                         if move_group:
@@ -124,6 +124,45 @@ class Board:
                                     moves.append(new_board)
                                 if self.board[move]:
                                     break
+
+                # Pawn movement
+                if self.board[board_index] & Piece.PAWN:
+                    if color & Piece.WHITE:
+                        move = board_index - 8
+                        if move >= 0 and self.board[move] is None:
+                            new_board = Board.fromBoard(board=[p for p in self.board])
+                            piece = new_board.board[board_index] | Piece.MOVED
+                            new_board.board[board_index] = None
+                            new_board.board[move] = piece
+                            # yield new_board
+                            moves.append(new_board)
+
+                            if board_index // 8 == 6 and self.board[move - 8] is None:
+                                new_board = Board.fromBoard(board=[p for p in self.board])
+                                piece = new_board.board[board_index] | Piece.MOVED
+                                new_board.board[board_index] = None
+                                new_board.board[move - 8] = piece
+                                # yield new_board
+                                moves.append(new_board)
+
+                    elif color & Piece.BLACK:
+                        move = board_index + 8
+                        if move < 64 and self.board[move] is None:
+                            new_board = Board.fromBoard(board=[p for p in self.board])
+                            piece = new_board.board[board_index] | Piece.MOVED
+                            new_board.board[board_index] = None
+                            new_board.board[move] = piece
+                            # yield new_board
+                            moves.append(new_board)
+
+                            if board_index // 8 == 1 and self.board[move + 8] is None:
+                                new_board = Board.fromBoard(board=[p for p in self.board])
+                                piece = new_board.board[board_index] | Piece.MOVED
+                                new_board.board[board_index] = None
+                                new_board.board[move + 8] = piece
+                                # yield new_board
+                                moves.append(new_board)
+
                 # Pawn capture
                 if self.board[board_index] & Piece.PAWN:
                     # Check eligible captures going LEFT
