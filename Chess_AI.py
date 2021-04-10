@@ -20,30 +20,30 @@ logging.info('Loaded.')
 
 def main():
 
-    # print()
-    # print('*' * 13, ' STARTING BOARD ', '*' * 13)
-    # b = Board()
-    # b.reset()
-    # b.print()
-    # print('*' * 44)
-    # print()
+    print()
+    print('*' * 13, ' STARTING BOARD ', '*' * 13)
+    b = Board()
+    b.reset()
+    b.print()
+    print('*' * 44)
+    print()
 
-    # black_boards = [b]
-    # white_boards = []
-    # for turns in range(2):
-    #     white_boards.clear()
-    #     for b in black_boards:
-    #         for wb in b.possibleMoveGenerator(Piece.WHITE):
-    #             if not wb.isCheckForColor(Piece.WHITE):
-    #                 white_boards.append(wb)
-    #     logging.info(f'Turn {turns + 1} for WHITE: {len(white_boards):,}')
+    black_boards = [b]
+    white_boards = []
+    for turns in range(2):
+        white_boards.clear()
+        for b in black_boards:
+            for wb in b.possibleMoveGenerator(Piece.WHITE):
+                if not wb.isCheckForColor(Piece.WHITE):
+                    white_boards.append(wb)
+        logging.info(f'Turn {turns + 1} for WHITE: {len(white_boards):,}')
 
-    #     black_boards.clear()
-    #     for b in white_boards:
-    #         for bb in b.possibleMoveGenerator(Piece.BLACK):
-    #             if not bb.isCheckForColor(Piece.BLACK):
-    #                 black_boards.append(bb)
-    #     logging.info(f'Turn {turns + 1} for BLACK: {len(black_boards):,}')
+        black_boards.clear()
+        for b in white_boards:
+            for bb in b.possibleMoveGenerator(Piece.BLACK):
+                if not bb.isCheckForColor(Piece.BLACK):
+                    black_boards.append(bb)
+        logging.info(f'Turn {turns + 1} for BLACK: {len(black_boards):,}')
     # 1 	20
     # 2 	400
     # 3 	8,902
@@ -55,21 +55,7 @@ def main():
     # 9 	2,439,530,234,167
     # 10 	69,352,859,712,417
 
-    b = Board()
-    b.reset()
-    b.clear()
-    b.board[60] = Piece.KING | Piece.WHITE
-    b.board[50] = Piece.KNIGHT | Piece.WHITE
-    b.board[48] = Piece.BISHOP | Piece.WHITE
-    b.board[0] = Piece.ROOK | Piece.BLACK
-    b.board[4] = Piece.KING | Piece.BLACK
-    b.board[7] = Piece.ROOK | Piece.BLACK
-    print('*' * 13, ' CASTLING TEST ', '*' * 13)
-    b.print()
-    moves = [brd for brd in b.possibleMoveGenerator(Piece.BLACK) if not brd.isCheckForColor(color=Piece.BLACK)]
-    for brd in moves:
-        brd.print()
-    logging.info(f'{len(moves):,} possibilities')
+    
 
 
 if __name__ == '__main__':

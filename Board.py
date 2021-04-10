@@ -1,3 +1,4 @@
+from types import prepare_class
 from Piece import Piece
 from MoveList import MoveList
 import logging
@@ -24,6 +25,7 @@ class Board:
         self.board = [None] * 64
 
     def reset(self) -> None:
+        self.clear()
         for column in range(1, 9):
             self.board[Board.translatePos(row=2, column=column)] = Piece.WHITE | Piece.PAWN
             self.board[Board.translatePos(row=7, column=column)] = Piece.BLACK | Piece.PAWN
@@ -59,7 +61,7 @@ class Board:
                 print('-' * 41)
         print('- A -- B -- C -- D -- E -- F -- G -- H -')
         print()
-        print(self.getFENString())
+        print(self.fen_key)
         print()
 
     def isCheckForColor(self, color) -> bool:
@@ -102,6 +104,9 @@ class Board:
             for testing
             https://en.wikipedia.org/wiki/Solving_chess for cool example
         """
+        if (str(self.board), color) in move_cache.keys():
+            # log.info('Using move cache')
+            return move_cache[(str(self.board), color)]
         moves = []
         for board_index in range(64):
             if self.board[board_index] is not None and self.board[board_index] & color:
@@ -207,6 +212,7 @@ class Board:
                             new_board.board[rook + 3] = new_rook
                             # yield new_board
                             moves.append(new_board)
+
         move_cache[(str(self.board), color)] = moves
         return moves
 
@@ -455,7 +461,77 @@ class Board:
         log.info(f'Number of moves generated: {len(moves)}')
         return moves
 
-    def getFENString(self) -> str:
+    def load_from_fen_string(self, fen_string: str) -> None:
+        keys = fen_string.split(' ')
+        board_string, player_turn, castling, en_passant, half_turns, full_turns = keys
+        print(board_string, player_turn, castling, en_passant, half_turns, full_turns)
+
+        def process_board_layout(board_string):
+            log.debug(f'Loading FEN string {board_string}...')
+            position = 0
+            self.clear()
+            for char in board_string:
+                log.debug(f'Processing {char}...')
+                if char.isdigit():
+                    position += int(char)
+                    log.debug(f'Skipping {int(char)} spaces...')
+                elif char.isalpha():
+                    piece_type = None
+                    if char.isupper():
+                        piece_color = Piece.WHITE
+                    else:
+                        piece_color = Piece.BLACK
+                    if char.upper() == 'R':
+                        piece_type = Piece.ROOK
+                        log.debug(f'Adding a ROOK to {position}...')
+                    elif char.upper() == 'N':
+                        piece_type = Piece.KNIGHT
+                    elif char.upper() == 'B':
+                        piece_type = Piece.BISHOP
+                    elif char.upper() == 'Q':
+                        piece_type = Piece.QUEEN
+                    elif char.upper() == 'K':
+                        piece_type = Piece.KING
+                    elif char.upper() == 'P':
+                        piece_type = Piece.PAWN
+                    elif char == '/':
+                        continue
+
+                    if char != '/':
+                        self.board[position] = piece_type | piece_color
+                        position += 1
+
+        def process_castling(castling: str) -> None:
+            if not castling:
+                return
+            if 'k' not in castling:
+                if self.board[4] and self.board[4] & Piece.KING and self.board[4] & Piece.BLACK:
+                    self.board[4] = self.board[4] | Piece.MOVED
+                if self.board[7] and self.board[7] & Piece.ROOK and self.board[7] & Piece.BLACK:
+                    self.board[7] = self.board[7] | Piece.MOVED
+            if 'q' not in castling:
+                if self.board[4] and self.board[4] & Piece.KING and self.board[4] & Piece.BLACK:
+                    self.board[4] = self.board[4] | Piece.MOVED
+                if self.board[0] and self.board[0] & Piece.ROOK and self.board[0] & Piece.BLACK:
+                    self.board[0] = self.board[7] | Piece.MOVED
+
+            if 'K' not in castling:
+                if self.board[60] and self.board[60] & Piece.KING and self.board[60] & Piece.WHITE:
+                    self.board[60] = self.board[60] | Piece.MOVED
+                if self.board[63] and self.board[63] & Piece.ROOK and self.board[63] & Piece.WHITE:
+                    self.board[63] = self.board[63] | Piece.MOVED
+            if 'Q' not in castling:
+                if self.board[60] and self.board[60] & Piece.KING and self.board[60] & Piece.WHITE:
+                    self.board[60] = self.board[60] | Piece.MOVED
+                if self.board[56] and self.board[56] & Piece.ROOK and self.board[56] & Piece.WHITE:
+                    self.board[56] = self.board[56] | Piece.MOVED
+
+        process_board_layout(board_string=board_string)
+        process_castling(castling=castling)
+
+
+    @property
+    def fen_key(self) -> str:
         def determineCastling(board) -> str:
             castling = ''
             # White
