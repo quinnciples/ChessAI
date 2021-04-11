@@ -139,3 +139,5 @@ cython_debug/
 
 log.txt
 config.ini
+moves_database.db
+moves_database.db-journal

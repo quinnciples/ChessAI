@@ -8,12 +8,49 @@ ml = MoveList()
 check_cache = {}
 move_cache = {}
 
+import sqlite3
+db_file = 'moves_database.db'
+log.info('Loading moves database...')
+moves_database = sqlite3.connect(db_file, isolation_level=None)
+db_cursor = moves_database.cursor()
+log.info('Loaded')
+# db_cursor.execute("DROP TABLE IF EXISTS moves;")
+# db_cursor.execute("CREATE TABLE IF NOT EXISTS moves (position TEXT, move TEXT, PRIMARY KEY (position, move));")
+
+
+def db_cache(func):
+    def wrapper_do_twice(*args, **kwargs):
+        fen_key = args[0].fen_key
+        # moves_database = sqlite3.connect(db_file, isolation_level=None)
+        # db_cursor = moves_database.cursor()
+        cache = db_cursor.execute(f"""SELECT move FROM moves WHERE position = '{fen_key}';""").fetchall()
+        if cache:
+            # moves_database.close()
+            returned_boards = []
+            for board in cache:
+                b = Board()
+                b.load_from_fen_string(board[0] + ' 0 0')
+                returned_boards.append(b)
+            # log.info('CACHE HIT')
+            return returned_boards
+        result = func(*args, **kwargs)
+        # log.debug('CACHE MISS')
+        if result:
+            items_to_insert = [(fen_key, move.fen_key) for move in result]
+            # db_cursor.execute(f"INSERT INTO moves (position, move) VALUES ('{fen_key}', '{move.fen_key}');")
+            db_cursor.executemany(f"INSERT INTO moves (position, move) VALUES (?, ?);", items_to_insert)
+            # print(f"INSERT INTO moves (position, move) VALUES ('{fen_key}', '{move.fen_key}');")
+            # moves_database.close()
+        return result
+    return wrapper_do_twice
+
 
 class Board:
     def __init__(self) -> None:
+        self.possible_moves = ml.move_list
+        self.en_passant_square = ''
         self.clear()
         self.reset()
-        self.possible_moves = ml.move_list
 
     @classmethod
     def fromBoard(cls, board):
@@ -23,6 +60,7 @@ class Board:
 
     def clear(self) -> None:
         self.board = [None] * 64
+        self.en_passant_square = ''
 
     def reset(self) -> None:
         self.clear()
@@ -51,6 +89,7 @@ class Board:
         self.halfmoves = 0
         self.fullmoves = 1
         self.active_color = Piece.WHITE
+        self.en_passant_square = ''
 
     def print(self) -> None:
         print('-' * 41)
@@ -84,13 +123,14 @@ class Board:
                 color_to_test = Piece.WHITE
 
             for board in self.possibleMoveGenerator(color=color_to_test):
-                if board.board[king_position] & color == 0:
+                if board.board[king_position] and board.board[king_position] & color == 0:
                     check_cache[(str(self.board), color)] = True
                     return True
             else:
                 check_cache[(str(self.board), color)] = False
                 return False
 
+    # @db_cache
     def possibleMoveGenerator(self, color: int) -> list:
         """Need to implement:
                 Pawn capturing
@@ -104,9 +144,9 @@ class Board:
             for testing
             https://en.wikipedia.org/wiki/Solving_chess for cool example
         """
-        if (str(self.board), color) in move_cache.keys():
-            # log.info('Using move cache')
-            return move_cache[(str(self.board), color)]
+        # if (str(self.board), color) in move_cache.keys():
+        #     # log.info('Using move cache')
+        #     return move_cache[(str(self.board), color)]
         moves = []
         for board_index in range(64):
             if self.board[board_index] is not None and self.board[board_index] & color:
@@ -115,11 +155,12 @@ class Board:
                     for move_group in all_possible_moves:
                         if move_group:
                             for move in move_group:
-                                if self.board[move] is None or (self.board[move] is not None and self.board[board_index] & Piece.PAWN == 0 and self.board[move] & color == 0):
+                                if self.board[move] is None or (self.board[move] is not None and self.board[move] & color == 0):
                                     new_board = Board.fromBoard(board=[p for p in self.board])
                                     piece = new_board.board[board_index] | Piece.MOVED
                                     new_board.board[board_index] = None
                                     new_board.board[move] = piece
+                                    new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                                     # yield new_board
                                     moves.append(new_board)
                                 if self.board[move]:
@@ -134,6 +175,7 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
 
@@ -142,6 +184,9 @@ class Board:
                                 piece = new_board.board[board_index] | Piece.MOVED
                                 new_board.board[board_index] = None
                                 new_board.board[move - 8] = piece
+                                new_board.en_passant_square = Board.algebraic_notation(move - 8)
+                                new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
+                                # print(new_board.fen_key)
                                 # yield new_board
                                 moves.append(new_board)
 
@@ -152,6 +197,7 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
 
@@ -160,6 +206,9 @@ class Board:
                                 piece = new_board.board[board_index] | Piece.MOVED
                                 new_board.board[board_index] = None
                                 new_board.board[move + 8] = piece
+                                new_board.en_passant_square = Board.algebraic_notation(move + 8)
+                                new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
+                                # print(new_board.fen_key)
                                 # yield new_board
                                 moves.append(new_board)
 
@@ -177,6 +226,7 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
                     # Check eligible captures going RIGHT
@@ -191,6 +241,7 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
 
@@ -208,6 +259,7 @@ class Board:
                             new_board.board[rook] = None
                             new_board.board[king + 2] = new_king
                             new_board.board[rook - 2] = new_rook
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
                     elif rook < king:
@@ -220,6 +272,7 @@ class Board:
                             new_board.board[rook] = None
                             new_board.board[king - 2] = new_king
                             new_board.board[rook + 3] = new_rook
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
 
@@ -237,6 +290,7 @@ class Board:
                             new_board.board[rook] = None
                             new_board.board[king + 2] = new_king
                             new_board.board[rook - 2] = new_rook
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
                     elif rook < king:
@@ -249,261 +303,17 @@ class Board:
                             new_board.board[rook] = None
                             new_board.board[king - 2] = new_king
                             new_board.board[rook + 3] = new_rook
+                            new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
 
-        move_cache[(str(self.board), color)] = moves
-        return moves
-
-    def generateValidMoves(self, color) -> list:
-        def handlePawnMoves(board, pawnLocation):
-            moves = []
-            if pawnLocation > 7 and board[pawnLocation] & Piece.WHITE:
-                if board[pawnLocation] & Piece.MOVED == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[pawnLocation] | Piece.MOVED
-                    new_board[pawnLocation] = None
-                    new_board[pawnLocation - 16] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-                if pawnLocation - 8 < 8:
-                    # Handle promotion
-                    for promoted_piece in (Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN):
-                        new_board = [p for p in board]
-                        piece = promoted_piece | Piece.MOVED | Piece.WHITE
-                        new_board[pawnLocation] = None
-                        new_board[pawnLocation - 8] = piece
-                        b = Board.fromBoard(board=new_board)
-                        moves.append(b)
-                        b.print()
-                else:
-                    new_board = [p for p in board]
-                    piece = new_board[pawnLocation] | Piece.MOVED
-                    new_board[pawnLocation] = None
-                    new_board[pawnLocation - 8] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            elif pawnLocation < 56 and board[pawnLocation] & Piece.BLACK:
-                if board[pawnLocation] & Piece.MOVED == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[pawnLocation] | Piece.MOVED
-                    new_board[pawnLocation] = None
-                    new_board[pawnLocation + 16] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-                if pawnLocation + 8 > 55:
-                    # Handle promotion
-                    for promoted_piece in (Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN):
-                        new_board = [p for p in board]
-                        piece = promoted_piece | Piece.MOVED | Piece.BLACK
-                        new_board[pawnLocation] = None
-                        new_board[pawnLocation + 8] = piece
-                        b = Board.fromBoard(board=new_board)
-                        moves.append(b)
-                        b.print()
-                else:
-                    new_board = [p for p in board]
-                    piece = new_board[pawnLocation] | Piece.MOVED
-                    new_board[pawnLocation] = None
-                    new_board[pawnLocation + 8] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            return moves
-
-        def handleRookMoves(board, rookLocation):
-            moves = []
-            piece_color = board[rookLocation] & (Piece.BLACK | Piece.WHITE)
-
-            # Left
-            for leftOffset in range(1, 8):
-                if (rookLocation - leftOffset) % 8 < rookLocation % 8:
-                    if board[rookLocation - leftOffset] is None or (board[rookLocation - leftOffset] and board[rookLocation - leftOffset] & piece_color == 0):
-                        new_board = [p for p in board]
-                        piece = new_board[rookLocation] | Piece.MOVED
-                        new_board[rookLocation] = None
-                        new_board[rookLocation - leftOffset] = piece
-                        b = Board.fromBoard(board=new_board)
-                        moves.append(b)
-                        b.print()
-                    if board[rookLocation - leftOffset]:
-                        break
-            # Right
-            for rightOffset in range(1, 8):
-                if (rookLocation + rightOffset) % 8 > rookLocation % 8:
-                    if board[rookLocation + rightOffset] is None or (board[rookLocation + rightOffset] and board[rookLocation + rightOffset] & piece_color == 0):
-                        new_board = [p for p in board]
-                        piece = new_board[rookLocation] | Piece.MOVED
-                        new_board[rookLocation] = None
-                        new_board[rookLocation + rightOffset] = piece
-                        b = Board.fromBoard(board=new_board)
-                        moves.append(b)
-                        b.print()
-                    if board[rookLocation + rightOffset]:
-                        break
-            # Up
-            for upOffset in range(1, 8):
-                if (rookLocation - (8 * upOffset)) > 0:
-                    if board[rookLocation - (8 * upOffset)] is None or (board[rookLocation - (8 * upOffset)] and board[rookLocation - (8 * upOffset)] & piece_color == 0):
-                        new_board = [p for p in board]
-                        piece = new_board[rookLocation] | Piece.MOVED
-                        new_board[rookLocation] = None
-                        new_board[rookLocation - (8 * upOffset)] = piece
-                        b = Board.fromBoard(board=new_board)
-                        moves.append(b)
-                        b.print()
-                    if board[rookLocation - (8 * upOffset)]:
-                        break
-            # Down
-            for downOffset in range(1, 8):
-                if (rookLocation + (8 * downOffset)) < 64:
-                    if board[rookLocation + (8 * downOffset)] is None or (board[rookLocation + (8 * downOffset)] and board[rookLocation + (8 * downOffset)] & piece_color == 0):
-                        new_board = [p for p in board]
-                        piece = new_board[rookLocation] | Piece.MOVED
-                        new_board[rookLocation] = None
-                        new_board[rookLocation + (8 * downOffset)] = piece
-                        b = Board.fromBoard(board=new_board)
-                        moves.append(b)
-                        b.print()
-                    if board[rookLocation + (8 * downOffset)]:
-                        break
-            return moves
-
-        def handleKnightMoves(board, knightLocation):
-            moves = []
-            piece_color = board[knightLocation] & (Piece.BLACK | Piece.WHITE)
-            rank = (7 - (knightLocation // 8)) + 1
-            file = (knightLocation % 8) + 1
-            # knightLocation % 8 - number of spaces away from left side
-            # 7 - (knightLocation % 8) - number of spaces away from right side
-            # knightLocation // 8 - number of spaces away from bottom side
-            # 7 - (knightLocation // 8) - number of spaces away from top side
-
-            # Up 1 Left 2 = -10
-            if rank <= 7 and file >= 3:
-                movement = -10
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            # Up 2 Left 1 = -17
-            if rank <= 6 and file >= 2:
-                movement = -17
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            # Up 1 Right 2 = -6
-            if rank <= 7 and file <= 6:
-                movement = -6
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            # Up 2 Right 1 = -15
-            if rank <= 6 and file <= 7:
-                movement = -15
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            # Down 1 Left 2 = +6
-            if rank >= 2 and file >= 3:
-                movement = 6
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            # Down 2 Left 1 = 15
-            if rank >= 3 and file >= 2:
-                movement = 15
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            # Down 1 Right 2 = 10
-            if rank >= 2 and file <= 6:
-                movement = 10
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            # Down 2 Right 1 = +17
-            if rank >= 3 and file <= 7:
-                movement = 17
-                if board[knightLocation + movement] is None or board[knightLocation + movement] & piece_color == 0:
-                    new_board = [p for p in board]
-                    piece = new_board[knightLocation] | Piece.MOVED
-                    new_board[knightLocation] = None
-                    new_board[knightLocation + movement] = piece
-                    b = Board.fromBoard(board=new_board)
-                    moves.append(b)
-                    b.print()
-            return moves
-
-        moves = []
-        piece_moves = []
-        positions_to_move = []
-        for position, piece in enumerate(self.board):
-            if not piece or not (piece & color):
-                continue
-            positions_to_move.append(position)
-        log.debug(f'Need to handle these positions: {positions_to_move}')
-
-        for board_position in positions_to_move:
-            piece = self.board[board_position]
-            piece_moves = []
-            if piece & Piece.PAWN:
-                piece_moves = handlePawnMoves(self.board, board_position)
-                for move in piece_moves:
-                    moves.append(move)
-            elif piece & Piece.KNIGHT:
-                piece_moves = handleKnightMoves(self.board, board_position)
-                for move in piece_moves:
-                    moves.append(move)
-            elif piece & Piece.ROOK:
-                piece_moves = handleRookMoves(self.board, board_position)
-                for move in piece_moves:
-                    moves.append(move)
-
-        log.info(f'Number of moves generated: {len(moves)}')
+        # move_cache[(str(self.board), color)] = moves
         return moves
 
     def load_from_fen_string(self, fen_string: str) -> None:
         keys = fen_string.split(' ')
         board_string, player_turn, castling, en_passant, half_turns, full_turns = keys
-        print(board_string, player_turn, castling, en_passant, half_turns, full_turns)
+        # print(board_string, player_turn, castling, en_passant, half_turns, full_turns)
 
         def process_board_layout(board_string):
             log.debug(f'Loading FEN string {board_string}...')
@@ -525,14 +335,19 @@ class Board:
                         log.debug(f'Adding a ROOK to {position}...')
                     elif char.upper() == 'N':
                         piece_type = Piece.KNIGHT
+                        log.debug(f'Adding a KNIGHT to {position}...')
                     elif char.upper() == 'B':
                         piece_type = Piece.BISHOP
+                        log.debug(f'Adding a BISHOP to {position}...')
                     elif char.upper() == 'Q':
                         piece_type = Piece.QUEEN
+                        log.debug(f'Adding a QUEEN to {position}...')
                     elif char.upper() == 'K':
                         piece_type = Piece.KING
+                        log.debug(f'Adding a KING to {position}...')
                     elif char.upper() == 'P':
                         piece_type = Piece.PAWN
+                        log.debug(f'Adding a PWN to {position}...')
                     elif char == '/':
                         continue
 
@@ -552,7 +367,7 @@ class Board:
                 if self.board[4] and self.board[4] & Piece.KING and self.board[4] & Piece.BLACK:
                     self.board[4] = self.board[4] | Piece.MOVED
                 if self.board[0] and self.board[0] & Piece.ROOK and self.board[0] & Piece.BLACK:
-                    self.board[0] = self.board[7] | Piece.MOVED
+                    self.board[0] = self.board[0] | Piece.MOVED
 
             if 'K' not in castling:
                 if self.board[60] and self.board[60] & Piece.KING and self.board[60] & Piece.WHITE:
@@ -619,13 +434,14 @@ class Board:
         fen += castling
         fen += ' '
         # En Passant
-        fen += '-'
-        fen += ' '
-        # Half moves
-        fen += str(self.halfmoves)
-        fen += ' '
-        # Full moves
-        fen += str(self.fullmoves)
+        if self.en_passant_square:    
+            fen += self.en_passant_square
+        # fen += ' '
+        # # Half moves
+        # fen += str(self.halfmoves)
+        # fen += ' '
+        # # Full moves
+        # fen += str(self.fullmoves)
 
         log.debug(f'{self.board} translated to {fen}')
         return fen
@@ -637,3 +453,14 @@ class Board:
             return position
         else:
             return None
+
+    @staticmethod
+    def algebraic_notation(board_index: int) -> str:
+        if board_index < 0 or board_index > 63:
+            return None
+        rank = 8 - (board_index // 8)
+        file = board_index % 8
+        rank_str = str(rank)
+        file_str = chr(97 + file)
+        notation = file_str + rank_str
+        return notation
