@@ -1,4 +1,5 @@
 from bcolors import bcolors
+from math import log2
 import logging
 log = logging.getLogger(__name__)
 
@@ -154,6 +155,16 @@ class BitBoardChess:
     def convert_position_to_mask(board_position: int) -> int:
         return 1 << (63 - board_position)
 
+    @staticmethod
+    def generate_positions_from_mask(board: int) -> int:
+        if board & ~(board - 1) != 0:
+            bit_value = board & ~(board - 1)
+            while bit_value != 0:
+                yield 63 - int(log2(bit_value))
+                board = board & ~bit_value
+                bit_value = board & ~(board - 1)
+        return
+
     def generate_horizontal_moves(self, board_position: int, piece_color: int) -> int:
         """
         Used to generate all available destination squares for pieces which can slide horizontally:
@@ -217,17 +228,15 @@ class BitBoardChess:
             move_mask = move_mask & (~self.BLACK_PIECES)
 
         return move_mask
-        # i = knight_board & ~(knight_board - 1)
-        # print_bitboard(i)
-        # knight_board = knight_board & ~i
-        # i = knight_board & ~(knight_board - 1)
-        # print_bitboard(i)
-        # knight_board = knight_board & ~i
-        # i = knight_board & ~(knight_board - 1)
-        # print_bitboard(i)
+
 
 
 def process_knight_move(knight_position: int) -> None:
+    """
+    Handles calculating all possible destination squares for the knight piece.
+    Utilizes KNIGHT_SPAN to determine which squares are in reach, and the
+    span is bit-shifted across the board to the knights's location
+    """
     print(' ' + '*' * 6 + ' ' + BitBoardChess.algebraic_notation(knight_position) + ' ' + '*' * 6)
     board = 0 | 1 << (63 - knight_position)
     BitBoardChess.print_bitboard(board)
@@ -253,10 +262,16 @@ def process_knight_move(knight_position: int) -> None:
 
 
 if __name__ == '__main__':
-    for move in range(64):
-        process_knight_move(move)
+    # for move in range(64):
+    #     process_knight_move(move)
 
     chess_board = BitBoardChess()
+
+    for position in BitBoardChess.generate_positions_from_mask(board=chess_board.BLACK_PIECES):
+        print(position)
+
+    for position in BitBoardChess.generate_positions_from_mask(board=chess_board.WHITE_PIECES):
+        print(position)
     # BitBoardChess.print_bitboard(chess_board.WHITE_PIECES)
     # BitBoardChess.print_bitboard(chess_board.BLACK_PIECES)
     # BitBoardChess.print_bitboard(chess_board.ALL_PIECES)
