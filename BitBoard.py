@@ -35,7 +35,10 @@ class BitBoardChess:
         self.RANK_MASKS = [0] * 8
         self.FILE_MASKS = [0] * 8
         self.HV_MASKS = [0] * 64
+        self.ULDR_DIAGONAL_MASKS = [0] * 64
+        self.DLUR_DIAGONAL_MASKS = [0] * 64
         self.setup_horizontal_and_vertical_masks()
+        self.setup_uldr_diagonal_and_dlur_diagonal_masks()
         self.reset()
 
     def reset(self) -> None:
@@ -71,6 +74,31 @@ class BitBoardChess:
             self.HV_MASKS[square] = mask_value
             # BitBoardChess.print_bitboard(self.HV_MASKS[square])
 
+    def setup_uldr_diagonal_and_dlur_diagonal_masks(self) -> None:
+        dlur_base_mask = 0b00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000
+        uldr_base_mask = 0b10000000_01000000_00100000_00010000_00001000_00000100_00000010_00000001
+        BitBoardChess.print_bitboard(uldr_base_mask)
+        BitBoardChess.print_bitboard(dlur_base_mask)
+        for square in range(64):
+            shift = (square % 8) - (square // 8)
+            if shift >= 0:
+                diagonal_mask = (uldr_base_mask >> abs(shift)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
+            else:
+                diagonal_mask = (uldr_base_mask >> (abs(shift) * 8)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
+            # Exclude anything down-left from this position
+            rank_mask = 0
+            for rank in range(0, 8 - (square // 8)):
+                rank_mask |= self.RANK_MASKS[rank]
+
+            file_mask = 0
+            for file in range(0, square % 8):
+                file_mask |= self.FILE_MASKS[file]
+
+            masked_positions = rank_mask & file_mask
+            self.ULDR_DIAGONAL_MASKS[square] = diagonal_mask & (~masked_positions)
+            print(square, shift)
+            # BitBoardChess.print_bitboard(self.ULDR_DIAGONAL_MASKS[square])
+            BitBoardChess.print_bitboard(diagonal_mask)
 
     @property
     def WHITE_PIECES(self) -> int:
@@ -113,24 +141,44 @@ class BitBoardChess:
     def convert_position_to_file(board_position: int) -> int:
         return board_position % 8
 
-    def generate_horizontal_moves(self, board_position: int, color: int) -> int:
+    def generate_horizontal_moves(self, board_position: int, piece_color: int) -> int:
         position_mask = 1 << (63 - board_position)
         occupied = self.ALL_PIECES
-        BitBoardChess.print_bitboard(occupied)
+        # BitBoardChess.print_bitboard(occupied)
         left_mask = occupied ^ (occupied - (2 * position_mask))
         left_mask = left_mask & chess_board.RANK_MASKS[BitBoardChess.convert_position_to_rank(board_position=board_position)]
-        BitBoardChess.print_bitboard(left_mask)
+        # BitBoardChess.print_bitboard(left_mask)
         right_mask = occupied ^ BitBoardChess.reverse_bits((BitBoardChess.reverse_bits(occupied) - (2 * BitBoardChess.reverse_bits(position_mask))))
         right_mask = right_mask & chess_board.RANK_MASKS[BitBoardChess.convert_position_to_rank(board_position=board_position)]
-        BitBoardChess.print_bitboard(right_mask)
+        # BitBoardChess.print_bitboard(right_mask)
         horizontal_move_mask = left_mask ^ right_mask
-        BitBoardChess.print_bitboard(horizontal_move_mask)
-        if color == BitBoardChess.WHITE:
+        # BitBoardChess.print_bitboard(horizontal_move_mask)
+        if piece_color == BitBoardChess.WHITE:
             horizontal_move_mask = horizontal_move_mask & (~self.WHITE_PIECES)
         else:
             horizontal_move_mask = horizontal_move_mask & (~self.BLACK_PIECES)
-        BitBoardChess.print_bitboard(horizontal_move_mask)
+        # BitBoardChess.print_bitboard(horizontal_move_mask)
         return horizontal_move_mask
+
+    def generate_vertical_moves(self, board_position: int, piece_color: int) -> int:
+        position_mask = 1 << (63 - board_position)
+        # BitBoardChess.print_bitboard(position_mask)
+        occupied = self.ALL_PIECES & self.FILE_MASKS[BitBoardChess.convert_position_to_file(board_position=board_position)]
+        # BitBoardChess.print_bitboard(occupied)
+        up_mask = occupied ^ (occupied - (2 * position_mask))
+        up_mask = up_mask & chess_board.FILE_MASKS[BitBoardChess.convert_position_to_file(board_position=board_position)]
+        # BitBoardChess.print_bitboard(up_mask)
+        down_mask = occupied ^ BitBoardChess.reverse_bits((BitBoardChess.reverse_bits(occupied) - (2 * BitBoardChess.reverse_bits(position_mask))))
+        down_mask = down_mask & chess_board.FILE_MASKS[BitBoardChess.convert_position_to_file(board_position=board_position)]
+        # BitBoardChess.print_bitboard(down_mask)
+        vertical_move_mask = up_mask ^ down_mask
+        # BitBoardChess.print_bitboard(vertical_move_mask)
+        if piece_color == BitBoardChess.WHITE:
+            vertical_move_mask = vertical_move_mask & (~self.WHITE_PIECES)
+        else:
+            vertical_move_mask = vertical_move_mask & (~self.BLACK_PIECES)
+        # BitBoardChess.print_bitboard(vertical_move_mask)
+        return vertical_move_mask
 
 
 def process_knight_move(knight_position: int) -> None:
@@ -170,12 +218,13 @@ for move in range(1):
     process_knight_move(move)
 
 chess_board = BitBoardChess()
-BitBoardChess.print_bitboard(chess_board.WHITE_PIECES)
-BitBoardChess.print_bitboard(chess_board.BLACK_PIECES)
-BitBoardChess.print_bitboard(chess_board.ALL_PIECES)
-print()
-print('*' * 30)
-print()
-chess_board.WHITE_ROOKS |= (1 << 34)
-chess_board.BLACK_PAWNS |= (1 << 38)
-chess_board.generate_horizontal_moves(29, color=BitBoardChess.WHITE)
+# BitBoardChess.print_bitboard(chess_board.WHITE_PIECES)
+# BitBoardChess.print_bitboard(chess_board.BLACK_PIECES)
+# BitBoardChess.print_bitboard(chess_board.ALL_PIECES)
+# print()
+# print('*' * 30)
+# print()
+# chess_board.WHITE_ROOKS |= (1 << 34)
+# chess_board.BLACK_PAWNS |= (1 << 38)
+# BitBoardChess.print_bitboard(chess_board.generate_horizontal_moves(29, piece_color=BitBoardChess.WHITE))
+# BitBoardChess.print_bitboard(chess_board.generate_vertical_moves(29, piece_color=BitBoardChess.WHITE))
