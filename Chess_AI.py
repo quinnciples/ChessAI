@@ -4,10 +4,11 @@ from mariadb_handler import MariaDBHandler
 from Piece import Piece
 from Board import Board
 from BitBoard import BitBoardChess
+from collections import namedtuple
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -45,20 +46,20 @@ def main():
     #             if not bb.isCheckForColor(Piece.BLACK):
     #                 black_boards.append(bb)
     #     logging.info(f'Turn {turns + 1} for BLACK: {len(black_boards):,}')
-    # # 1 	20
-    # # 2 	400
-    # # 3 	8,902
-    # # 4 	197,281
-    # # 5 	4,865,609
-    # # 6 	119,060,324
-    # # 7 	3,195,901,860
-    # # 8 	84,998,978,956
-    # # 9 	2,439,530,234,167
-    # # 10 	69,352,859,712,417
+    # 1 	20
+    # 2 	400
+    # 3 	8,902
+    # 4 	197,281
+    # 5 	4,865,609
+    # 6 	119,060,324
+    # 7 	3,195,901,860
+    # 8 	84,998,978,956
+    # 9 	2,439,530,234,167
+    # 10 	69,352,859,712,417
 
     chess_board = BitBoardChess()
-    chess_board.process_king_move(4, piece_color=BitBoardChess.BLACK)
-    chess_board.process_king_move(60, piece_color=BitBoardChess.WHITE)
+    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
+    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
 
 
 if __name__ == '__main__':
