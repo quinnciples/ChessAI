@@ -144,7 +144,7 @@ class BitBoardChess:
         return board_position % 8
 
     @staticmethod
-    def algebraic_notation(board_position: int) -> str:
+    def convert_position_to_algebraic_notation(board_position: int) -> str:
         rank = 8 - (board_position // 8)
         file = board_position % 8 + 1
         file_str = chr(97 + file - 1)
@@ -207,7 +207,7 @@ class BitBoardChess:
         Utilizes KING_SPAN to determine which squares are in reach, and the
         span is bit-shifted across the board to the king's location
         """
-        # print(' ' + '*' * 6 + ' ' + BitBoardChess.algebraic_notation(board_position) + ' ' + '*' * 6)
+        # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
         move_mask = 0 | 1 << (63 - board_position)
 
         if BitBoardChess.KING_SQUARE - board_position > 0:
@@ -229,36 +229,100 @@ class BitBoardChess:
 
         return move_mask
 
+    def process_pawn_move(self, board_position: int, piece_color: int) -> int:
+        """
+        Handles calculating all possible destination squares for the pawn piece.
+        Assumes a one-square vertical move by default, unless that square is occupied by any piece.
+        If a one-square move is possible, and the pawn is still on its starting rank,
+        an initial move of 2 squares is available if this destination square is also unoccupied.
+        """
+        # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
+        initial_position = 0 | 1 << (63 - board_position)
+        if piece_color == BitBoardChess.WHITE:
+            # Moving up the board, but not to the last rank -- promotion is handled separately
+            move_mask = (initial_position << 8) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EMPTY_SQUARES & ~BitBoardChess.RANK_8
+            if move_mask > 0 and initial_position & BitBoardChess.RANK_2:
+                # We started on the initial rank, and we were able to move 1 square -- let's try for two.
+                move_mask |= (initial_position << 16) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EMPTY_SQUARES & ~BitBoardChess.RANK_8
+        elif piece_color == BitBoardChess.BLACK:
+            # Moving up the board, but not to the last rank -- promotion is handled separately
+            move_mask = (initial_position >> 8) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EMPTY_SQUARES & ~BitBoardChess.RANK_1
+            if move_mask > 0 and initial_position & BitBoardChess.RANK_7:
+                # We started on the initial rank, and we were able to move 1 square -- let's try for two.
+                move_mask |= (initial_position >> 16) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EMPTY_SQUARES & ~BitBoardChess.RANK_1
 
+        return move_mask
 
-def process_knight_move(knight_position: int) -> None:
-    """
-    Handles calculating all possible destination squares for the knight piece.
-    Utilizes KNIGHT_SPAN to determine which squares are in reach, and the
-    span is bit-shifted across the board to the knights's location
-    """
-    print(' ' + '*' * 6 + ' ' + BitBoardChess.algebraic_notation(knight_position) + ' ' + '*' * 6)
-    board = 0 | 1 << (63 - knight_position)
-    BitBoardChess.print_bitboard(board)
-    if BitBoardChess.KNIGHT_SQUARE - knight_position > 0:
-        knight_board = (BitBoardChess.KNIGHT_SPAN << (BitBoardChess.KNIGHT_SQUARE - knight_position)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
-    else:
-        knight_board = (BitBoardChess.KNIGHT_SPAN >> (knight_position - BitBoardChess.KNIGHT_SQUARE)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
-    if knight_position % 8 < 2:
-        knight_board = knight_board & ~BitBoardChess.FILE_GH
-    elif knight_position % 8 > 5:
-        knight_board = knight_board & ~BitBoardChess.FILE_AB
-    BitBoardChess.print_bitboard(knight_board)
-    print()
-    print()
-    # i = knight_board & ~(knight_board - 1)
-    # print_bitboard(i)
-    # knight_board = knight_board & ~i
-    # i = knight_board & ~(knight_board - 1)
-    # print_bitboard(i)
-    # knight_board = knight_board & ~i
-    # i = knight_board & ~(knight_board - 1)
-    # print_bitboard(i)
+    def process_pawn_capture_left(self, board_position: int, piece_color: int) -> int:
+        """
+        Handles calculating all possible destination squares for the king piece.
+        Utilizes KING_SPAN to determine which squares are in reach, and the
+        span is bit-shifted across the board to the king's location
+        """
+        pass
+
+    def process_pawn_capture_right(self, board_position: int, piece_color: int) -> int:
+        """
+        Handles calculating all possible destination squares for the king piece.
+        Utilizes KING_SPAN to determine which squares are in reach, and the
+        span is bit-shifted across the board to the king's location
+        """
+        pass
+
+    def process_pawn_promotion(self, board_position: int, piece_color: int) -> int:
+        """
+        Handles calculating all possible destination squares for the king piece.
+        Utilizes KING_SPAN to determine which squares are in reach, and the
+        span is bit-shifted across the board to the king's location
+        """
+        pass
+
+    def process_knight_move(self, board_position: int, piece_color: int) -> None:
+        """
+        Handles calculating all possible destination squares for the knight piece.
+        Utilizes KNIGHT_SPAN to determine which squares are in reach, and the
+        span is bit-shifted across the board to the knights's location
+        """
+        # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
+        move_mask = 0 | 1 << (63 - board_position)
+        BitBoardChess.print_bitboard(move_mask)
+        if BitBoardChess.KNIGHT_SQUARE - board_position > 0:
+            move_mask = (BitBoardChess.KNIGHT_SPAN << (BitBoardChess.KNIGHT_SQUARE - board_position)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
+        else:
+            move_mask = (BitBoardChess.KNIGHT_SPAN >> (board_position - BitBoardChess.KNIGHT_SQUARE)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
+
+        if board_position % 8 < 2:
+            move_mask = move_mask & ~BitBoardChess.FILE_GH
+        elif board_position % 8 > 5:
+            move_mask = move_mask & ~BitBoardChess.FILE_AB
+
+        # Knight can go to where an opponent's piece is located, but not one of its own pieces
+        if piece_color == BitBoardChess.WHITE:
+            move_mask = move_mask & (~self.WHITE_PIECES)
+        else:
+            move_mask = move_mask & (~self.BLACK_PIECES)
+
+        return move_mask
+
+    def generate_all_possible_moves(self, piece_color: int) -> list:
+        all_possible_moves = []
+        # ******************** Pawns ********************
+        # Pawn movement
+        for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS):
+            destinations = self.process_pawn_move(pawn_square, piece_color=piece_color)
+            if destinations:
+                for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+
+        # ******************** Knights ********************
+        for knight_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KNIGHTS):
+            destinations = self.process_knight_move(knight_square, piece_color=piece_color)
+            if destinations:
+                for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(knight_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+
+        print(all_possible_moves)
+
 
 
 if __name__ == '__main__':
@@ -266,19 +330,13 @@ if __name__ == '__main__':
     #     process_knight_move(move)
 
     chess_board = BitBoardChess()
+    # chess_board.process_knight_move(board_position=1, piece_color=BitBoardChess.BLACK)
+    BitBoardChess.print_bitboard(chess_board.process_pawn_move(board_position=10, piece_color=BitBoardChess.BLACK))
+    BitBoardChess.print_bitboard(chess_board.process_pawn_move(board_position=50, piece_color=BitBoardChess.WHITE))
+    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
 
-    for position in BitBoardChess.generate_positions_from_mask(board=chess_board.BLACK_PIECES):
-        print(position)
+    # for position in BitBoardChess.generate_positions_from_mask(board=chess_board.BLACK_PIECES):
+    #     print(BitBoardChess.convert_position_to_algebraic_notation(position))
 
-    for position in BitBoardChess.generate_positions_from_mask(board=chess_board.WHITE_PIECES):
-        print(position)
-    # BitBoardChess.print_bitboard(chess_board.WHITE_PIECES)
-    # BitBoardChess.print_bitboard(chess_board.BLACK_PIECES)
-    # BitBoardChess.print_bitboard(chess_board.ALL_PIECES)
-    # print()
-    # print('*' * 30)
-    # print()
-    # chess_board.WHITE_ROOKS |= (1 << 34)
-    # chess_board.BLACK_PAWNS |= (1 << 38)
-    # BitBoardChess.print_bitboard(chess_board.generate_horizontal_moves(29, piece_color=BitBoardChess.WHITE))
-    # BitBoardChess.print_bitboard(chess_board.generate_vertical_moves(29, piece_color=BitBoardChess.WHITE))
+    # for position in BitBoardChess.generate_positions_from_mask(board=chess_board.WHITE_PIECES):
+    #     print(BitBoardChess.convert_position_to_algebraic_notation(position))
