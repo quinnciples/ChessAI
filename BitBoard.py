@@ -344,6 +344,7 @@ class BitBoardChess:
         else:
             move_mask = move_mask & (~self.BLACK_PIECES)
 
+        # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
     def process_pawn_move(self, board_position: int, piece_color: int) -> int:
@@ -459,7 +460,14 @@ class BitBoardChess:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(queen_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
 
-        print(all_possible_moves)
+        # ******************** King ********************
+        for king_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KINGS):
+            destinations = self.process_king_move(king_square, piece_color=piece_color)
+            if destinations:
+                for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(king_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+
+        print(len(all_possible_moves), all_possible_moves)
 
 
 if __name__ == '__main__':
