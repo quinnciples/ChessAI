@@ -1,3 +1,8 @@
+"""
+TO-DO
+    Modify the up-down movement code to use a "movement mask" argument, and isolate this code
+"""
+
 from bcolors import bcolors
 from math import log2
 import logging
@@ -49,7 +54,7 @@ class BitBoardChess:
         self.WHITE_PAWNS =   0b0000000000000000000000000000000000000000000000001111111100000000
         self.WHITE_ROOKS =   0b0000000000000000000000000000000000000000000000000000000010000001
         self.WHITE_KNIGHTS = 0b0000000000000000000000000000000000000000000000000000000001000010
-        self.WHITE_BISHOPS = 0b0000000000000000000000000000000000000000000000000000000000100100
+        self.WHITE_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100100
         self.WHITE_QUEENS =  0b0000000000000000000000000000000000000000000000000000000000010000
         self.WHITE_KINGS =   0b0000000000000000000000000000000000000000000000000000000000001000
 
@@ -88,6 +93,8 @@ class BitBoardChess:
             else:
                 uldr_diagonal_mask = (uldr_base_mask >> (abs(shift) * 8)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
             self.ULDR_DIAGONAL_MASKS[square] = uldr_diagonal_mask & ~(1 << (63 - square))
+            # print(square)
+            # BitBoardChess.print_bitboard(self.ULDR_DIAGONAL_MASKS[square])
 
             shift = (square % 8) - (square // 8)
             if shift >= 0:
@@ -118,6 +125,7 @@ class BitBoardChess:
     def reverse_bits(bitboard: int) -> int:
         bits_string = f"{bitboard:064b}"
         reversed_bits_string = ''.join(bits_string[::-1])
+        log.debug(f'{bits_string} -> {reversed_bits_string}')
         reversed_number = int(reversed_bits_string, base=2)
         return reversed_number
 
@@ -174,7 +182,7 @@ class BitBoardChess:
         occupied = self.ALL_PIECES
         left_mask = occupied ^ (occupied - (2 * position_mask))
         left_mask = left_mask & self.RANK_MASKS[BitBoardChess.convert_position_to_rank(board_position=board_position)]
-        right_mask = occupied ^ BitBoardChess.reverse_bits((BitBoardChess.reverse_bits(occupied) - (2 * BitBoardChess.reverse_bits(position_mask))))
+        right_mask = occupied ^ BitBoardChess.reverse_bits(abs((BitBoardChess.reverse_bits(occupied) - (2 * BitBoardChess.reverse_bits(position_mask)))))
         right_mask = right_mask & self.RANK_MASKS[BitBoardChess.convert_position_to_rank(board_position=board_position)]
         horizontal_move_mask = left_mask ^ right_mask
         if piece_color == BitBoardChess.WHITE:
@@ -192,14 +200,84 @@ class BitBoardChess:
         occupied = self.ALL_PIECES & self.FILE_MASKS[BitBoardChess.convert_position_to_file(board_position=board_position)]
         up_mask = occupied ^ (occupied - (2 * position_mask))
         up_mask = up_mask & self.FILE_MASKS[BitBoardChess.convert_position_to_file(board_position=board_position)]
-        down_mask = occupied ^ BitBoardChess.reverse_bits((BitBoardChess.reverse_bits(occupied) - (2 * BitBoardChess.reverse_bits(position_mask))))
-        down_mask = down_mask & self.FILE_MASKS[BitBoardChess.convert_position_to_file(board_position=board_position)]
+
+        # Reverse the board, and do the same up logic
+        occupied_reversed = BitBoardChess.reverse_bits(occupied)
+        position_mask_reversed = BitBoardChess.reverse_bits(position_mask)
+        board_position_reversed = 63 - board_position
+
+        down_mask = occupied_reversed ^ (occupied_reversed - (2 * position_mask_reversed))
+        down_mask = down_mask & self.FILE_MASKS[BitBoardChess.convert_position_to_file(board_position=board_position_reversed)]
+        down_mask = BitBoardChess.reverse_bits(bitboard=down_mask)
+        # BitBoardChess.print_bitboard(down_mask)
+
         vertical_move_mask = up_mask ^ down_mask
         if piece_color == BitBoardChess.WHITE:
             vertical_move_mask = vertical_move_mask & (~self.WHITE_PIECES)
         else:
             vertical_move_mask = vertical_move_mask & (~self.BLACK_PIECES)
         return vertical_move_mask
+
+    def generate_diagonal_uldr_moves(self, board_position: int, piece_color: int) -> int:
+        """
+        Used to generate all available destination squares for pieces which can slide diagonally:
+            --> Bishop, Queen
+        """
+        position_mask = 1 << (63 - board_position)
+        occupied = self.ALL_PIECES & self.ULDR_DIAGONAL_MASKS[board_position]
+        up_mask = occupied ^ (occupied - (2 * position_mask))
+        up_mask = up_mask & self.ULDR_DIAGONAL_MASKS[board_position]
+        down_mask = occupied ^ BitBoardChess.reverse_bits(abs((BitBoardChess.reverse_bits(occupied) - (2 * BitBoardChess.reverse_bits(position_mask)))))
+        down_mask = down_mask & self.ULDR_DIAGONAL_MASKS[board_position]
+        ul_dr_move_mask = up_mask ^ down_mask
+        if piece_color == BitBoardChess.WHITE:
+            ul_dr_move_mask = ul_dr_move_mask & (~self.WHITE_PIECES)
+        else:
+            ul_dr_move_mask = ul_dr_move_mask & (~self.BLACK_PIECES)
+
+        return ul_dr_move_mask
+
+    def generate_diagonal_urdl_moves(self, board_position: int, piece_color: int) -> int:
+        """
+        Used to generate all available destination squares for pieces which can slide diagonally:
+            --> Bishop, Queen
+        """
+        position_mask = 1 << (63 - board_position)
+        occupied = self.ALL_PIECES & self.URDL_DIAGONAL_MASKS[board_position]
+        up_mask = occupied ^ (occupied - (2 * position_mask))
+        up_mask = up_mask & self.URDL_DIAGONAL_MASKS[board_position]
+        down_mask = occupied ^ BitBoardChess.reverse_bits(abs((BitBoardChess.reverse_bits(occupied) - (2 * BitBoardChess.reverse_bits(position_mask)))))
+        down_mask = down_mask & self.URDL_DIAGONAL_MASKS[board_position]
+        ur_dl_move_mask = up_mask ^ down_mask
+        if piece_color == BitBoardChess.WHITE:
+            ur_dl_move_mask = ur_dl_move_mask & (~self.WHITE_PIECES)
+        else:
+            ur_dl_move_mask = ur_dl_move_mask & (~self.BLACK_PIECES)
+
+        return ur_dl_move_mask
+
+    def process_bishop_move(self, board_position: int, piece_color: int) -> int:
+        """
+        Handles calculating all possible destination squares for the Bishop piece.
+        Utilizes ULDR_DIAGONAL_MASKS and URDL_DIAGONAL_MASKS to determine which squares are in reach.
+        Results are modified for captures of the opponent's piece.
+        """
+        # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
+        move_mask = self.generate_diagonal_uldr_moves(board_position=board_position, piece_color=piece_color) | self.generate_diagonal_urdl_moves(board_position=board_position, piece_color=piece_color)
+        # BitBoardChess.print_bitboard(move_mask)
+        return move_mask
+
+    def process_queen_move(self, board_position: int, piece_color: int) -> int:
+        """
+        Handles calculating all possible destination squares for the Queen piece.
+        Combines the horizontal, vertical, and diagonal move masks.
+        Results are modified for captures of the opponent's piece.
+        """
+        # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
+        move_mask = self.generate_horizontal_moves(board_position=board_position, piece_color=piece_color) | self.generate_vertical_moves(board_position=board_position, piece_color=piece_color)
+        move_mask |= self.generate_diagonal_uldr_moves(board_position=board_position, piece_color=piece_color) | self.generate_diagonal_urdl_moves(board_position=board_position, piece_color=piece_color)
+        # BitBoardChess.print_bitboard(move_mask)
+        return move_mask
 
     def process_king_move(self, board_position: int, piece_color: int) -> int:
         """
@@ -285,7 +363,7 @@ class BitBoardChess:
         """
         # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
         move_mask = 0 | 1 << (63 - board_position)
-        BitBoardChess.print_bitboard(move_mask)
+
         if BitBoardChess.KNIGHT_SQUARE - board_position > 0:
             move_mask = (BitBoardChess.KNIGHT_SPAN << (BitBoardChess.KNIGHT_SQUARE - board_position)) & BitBoardChess.SIXTY_FOUR_BIT_MASK
         else:
@@ -321,8 +399,21 @@ class BitBoardChess:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(knight_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
 
-        print(all_possible_moves)
+        # ******************** Bishops ********************
+        for bishop_square in BitBoardChess.generate_positions_from_mask(self.WHITE_BISHOPS):
+            destinations = self.process_bishop_move(bishop_square, piece_color=piece_color)
+            if destinations:
+                for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(bishop_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
 
+        # ******************** Queens ********************
+        for queen_square in BitBoardChess.generate_positions_from_mask(self.WHITE_QUEENS):
+            destinations = self.process_queen_move(queen_square, piece_color=piece_color)
+            if destinations:
+                for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(queen_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+
+        print(all_possible_moves)
 
 
 if __name__ == '__main__':
@@ -331,8 +422,8 @@ if __name__ == '__main__':
 
     chess_board = BitBoardChess()
     # chess_board.process_knight_move(board_position=1, piece_color=BitBoardChess.BLACK)
-    BitBoardChess.print_bitboard(chess_board.process_pawn_move(board_position=10, piece_color=BitBoardChess.BLACK))
-    BitBoardChess.print_bitboard(chess_board.process_pawn_move(board_position=50, piece_color=BitBoardChess.WHITE))
+    # BitBoardChess.print_bitboard(chess_board.process_pawn_move(board_position=10, piece_color=BitBoardChess.BLACK))
+    # BitBoardChess.print_bitboard(chess_board.process_pawn_move(board_position=50, piece_color=BitBoardChess.WHITE))
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
 
     # for position in BitBoardChess.generate_positions_from_mask(board=chess_board.BLACK_PIECES):
