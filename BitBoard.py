@@ -206,7 +206,6 @@ class BitBoardChess:
             piece_label += bcolors.ENDC
         return piece_label
 
-
     def setup_horizontal_and_vertical_masks(self) -> None:
         log.debug('Generating horizontal and vertical masks...')
         rank_base_mask = 0b11111111
@@ -300,6 +299,18 @@ class BitBoardChess:
         file_str = chr(97 + file - 1)
         rank_str = str(rank)
         return file_str + rank_str
+
+    @staticmethod
+    def convert_algebraic_notation_to_position(algebraic_notation: str) -> int:
+        """
+        Converts a two-character algebraic notation (b2, etc) to the board position index.
+        """
+        file = ord(algebraic_notation[0]) - 97
+        rank = int(algebraic_notation[1])
+        rank = 8 - rank
+        rank *= 8
+        board_position = rank + file
+        return board_position
 
     @staticmethod
     def convert_position_to_mask(board_position: int) -> int:
@@ -707,11 +718,59 @@ class BitBoardChess:
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(king_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
 
         # ******************** Castling ********************
-        castling_options = self.process_castling_moves(piece_color=piece_color)
-        for castling_option in castling_options:
-            all_possible_moves.append(f'{castling_option}')
+        # castling_options = self.process_castling_moves(piece_color=piece_color)
+        # for castling_option in castling_options:
+        #     all_possible_moves.append(f'{castling_option}')
 
         log.info(f"""{len(all_possible_moves)} moves generated for {"WHITE" if piece_color == BitBoardChess.WHITE else "BLACK"}: {all_possible_moves}""")
+        return all_possible_moves
+
+    def apply_move(self, move: str, piece_color: int) -> None:
+        # Save settings?
+        start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
+        end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
+        start_mask = BitBoardChess.convert_position_to_mask(start_square)
+        end_mask = BitBoardChess.convert_position_to_mask(end_square)
+        if piece_color == BitBoardChess.WHITE:
+            # BitBoardChess.print_bitboard(start_mask)
+            # BitBoardChess.print_bitboard(end_mask)
+            if self.WHITE_PAWNS & start_mask:
+                self.WHITE_PAWNS &= ~start_mask
+                self.WHITE_PAWNS |= end_mask
+            elif self.WHITE_KNIGHTS & start_mask:
+                self.WHITE_KNIGHTS &= ~start_mask
+                self.WHITE_KNIGHTS |= end_mask
+            elif self.WHITE_BISHOPS & start_mask:
+                self.WHITE_BISHOPS &= ~start_mask
+                self.WHITE_BISHOPS |= end_mask
+            elif self.WHITE_ROOKS & start_mask:
+                self.WHITE_ROOKS &= ~start_mask
+                self.WHITE_ROOKS |= end_mask
+            elif self.WHITE_QUEENS & start_mask:
+                self.WHITE_QUEENS &= ~start_mask
+                self.WHITE_QUEENS |= end_mask
+            elif self.WHITE_KINGS & start_mask:
+                self.WHITE_KINGS &= ~start_mask
+                self.WHITE_KINGS |= end_mask
+            else:
+                raise Exception('Move not found on board.')
+                return
+
+            # Check for captures
+            if self.BLACK_PIECES & end_mask:
+                if self.BLACK_PAWNS & start_mask:
+                    self.BLACK_PAWNS &= ~end_mask
+                elif self.BLACK_KNIGHTS & start_mask:
+                    self.BLACK_KNIGHTS &= ~end_mask
+                elif self.BLACK_BISHOPS & start_mask:
+                    self.BLACK_BISHOPS &= ~end_mask
+                elif self.BLACK_ROOKS & start_mask:
+                    self.BLACK_ROOKS &= ~end_mask
+                elif self.BLACK_QUEENS & start_mask:
+                    self.BLACK_QUEENS &= ~end_mask
+                elif self.BLACK_KINGS & start_mask:
+                    self.BLACK_KINGS &= ~end_mask
+
 
 
 if __name__ == '__main__':
@@ -719,10 +778,21 @@ if __name__ == '__main__':
     chess_board.print_board()
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
-    # https://www.chessprogramming.org/Encoding_Moves
-    chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
+    # # https://www.chessprogramming.org/Encoding_Moves
+    # chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
+    # chess_board.print_board()
+    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
+    # chess_board.load_from_fen_string(fen_string="R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1")
+    # chess_board.print_board()
+    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
+    chess_board.reset()
+    chess_board.apply_move('a2a4', piece_color=BitBoardChess.WHITE)
     chess_board.print_board()
-    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
-    chess_board.load_from_fen_string(fen_string="R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1")
-    chess_board.print_board()
-    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
+
+    # chess_board.reset()
+    # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE):
+    #     print(move)
+    #     chess_board.apply_move(move, piece_color=BitBoardChess.WHITE)
+    #     chess_board.print_board()
+    #     chess_board.reset()
+
