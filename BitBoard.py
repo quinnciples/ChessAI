@@ -154,7 +154,7 @@ class BitBoardChess:
                     self.CASTLING[key] = 1
                 else:
                     self.CASTLING[key] = 0
-            log.info(f'Setting castling of {castling} to: {self.CASTLING}')   
+            log.info(f'Setting castling of {castling} to: {self.CASTLING}')
 
         process_board_layout(board_string=board_string)
         process_castling(castling=castling)
@@ -758,19 +758,20 @@ class BitBoardChess:
 
             # Check for captures
             if self.BLACK_PIECES & end_mask:
-                if self.BLACK_PAWNS & start_mask:
+                if self.BLACK_PAWNS & end_mask:
                     self.BLACK_PAWNS &= ~end_mask
-                elif self.BLACK_KNIGHTS & start_mask:
+                elif self.BLACK_KNIGHTS & end_mask:
                     self.BLACK_KNIGHTS &= ~end_mask
-                elif self.BLACK_BISHOPS & start_mask:
+                elif self.BLACK_BISHOPS & end_mask:
                     self.BLACK_BISHOPS &= ~end_mask
-                elif self.BLACK_ROOKS & start_mask:
+                elif self.BLACK_ROOKS & end_mask:
                     self.BLACK_ROOKS &= ~end_mask
-                elif self.BLACK_QUEENS & start_mask:
+                elif self.BLACK_QUEENS & end_mask:
                     self.BLACK_QUEENS &= ~end_mask
-                elif self.BLACK_KINGS & start_mask:
+                elif self.BLACK_KINGS & end_mask:
                     self.BLACK_KINGS &= ~end_mask
-        elif  piece_color == BitBoardChess.BLACK:
+
+        elif piece_color == BitBoardChess.BLACK:
             # BitBoardChess.print_bitboard(start_mask)
             # BitBoardChess.print_bitboard(end_mask)
             if self.BLACK_PAWNS & start_mask:
@@ -797,19 +798,18 @@ class BitBoardChess:
 
             # Check for captures
             if self.WHITE_PIECES & end_mask:
-                if self.WHITE_PAWNS & start_mask:
+                if self.WHITE_PAWNS & end_mask:
                     self.WHITE_PAWNS &= ~end_mask
-                elif self.WHITE_KNIGHTS & start_mask:
+                elif self.WHITE_KNIGHTS & end_mask:
                     self.WHITE_KNIGHTS &= ~end_mask
-                elif self.WHITE_BISHOPS & start_mask:
+                elif self.WHITE_BISHOPS & end_mask:
                     self.WHITE_BISHOPS &= ~end_mask
-                elif self.WHITE_ROOKS & start_mask:
+                elif self.WHITE_ROOKS & end_mask:
                     self.WHITE_ROOKS &= ~end_mask
-                elif self.WHITE_QUEENS & start_mask:
+                elif self.WHITE_QUEENS & end_mask:
                     self.WHITE_QUEENS &= ~end_mask
-                elif self.WHITE_KINGS & start_mask:
+                elif self.WHITE_KINGS & end_mask:
                     self.WHITE_KINGS &= ~end_mask
-
 
 
 if __name__ == '__main__':
@@ -825,7 +825,10 @@ if __name__ == '__main__':
     # chess_board.print_board()
     # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
     chess_board.reset()
-    chess_board.apply_move('a2a4', piece_color=BitBoardChess.WHITE)
+    chess_board.apply_move('e2e4', piece_color=BitBoardChess.WHITE)
+    chess_board.apply_move('d7d5', piece_color=BitBoardChess.BLACK)
+    chess_board.print_board()
+    chess_board.apply_move('e4d5', piece_color=BitBoardChess.WHITE)
     chess_board.print_board()
 
     # chess_board.reset()
@@ -834,4 +837,3 @@ if __name__ == '__main__':
     #     chess_board.apply_move(move, piece_color=BitBoardChess.WHITE)
     #     chess_board.print_board()
     #     chess_board.reset()
-
