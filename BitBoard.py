@@ -46,6 +46,7 @@ class BitBoardChess:
         self.HV_MASKS = [0] * 64
         self.ULDR_DIAGONAL_MASKS = [0] * 64
         self.URDL_DIAGONAL_MASKS = [0] * 64
+        self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
         self.setup_horizontal_and_vertical_masks()
         self.setup_uldr_diagonal_and_urdl_diagonal_masks()
         self.reset()
@@ -65,6 +66,106 @@ class BitBoardChess:
         self.BLACK_QUEENS =  0b00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_KINGS =   0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
+        self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
+
+    def clear(self) -> None:
+        self.WHITE_PAWNS =   0
+        self.WHITE_ROOKS =   0
+        self.WHITE_KNIGHTS = 0
+        self.WHITE_BISHOPS = 0
+        self.WHITE_QUEENS =  0
+        self.WHITE_KINGS =   0
+
+        self.BLACK_PAWNS =   0
+        self.BLACK_ROOKS =   0
+        self.BLACK_KNIGHTS = 0
+        self.BLACK_BISHOPS = 0
+        self.BLACK_QUEENS =  0
+        self.BLACK_KINGS =   0
+
+        self.CASTLING = {'K': 0, 'Q': 0, 'k': 0, 'q': 0}
+
+    def load_from_fen_string(self, fen_string: str) -> None:
+        keys = fen_string.split(' ')
+        print(keys)
+        board_string, player_turn, castling, en_passant, half_turns, full_turns = '', 'w', '-', '-', 0, 0
+        board_string = keys[0]
+        if len(keys) >= 2:
+            player_turn = keys[1]
+        if len(keys) >= 3:
+            castling = keys[2]
+        if len(keys) >= 4:
+            en_passant = keys[3]
+        if len(keys) >= 5:
+            half_turns = int(keys[4])
+        if len(keys) >= 6:
+            half_turns = int(keys[5])
+        print(board_string, player_turn, castling, en_passant, half_turns, full_turns)
+
+        def process_board_layout(board_string):
+            log.debug(f'Loading FEN string {board_string}...')
+            position = 0 | (1 << 63)
+            BitBoardChess.print_bitboard(position)
+            self.clear()
+            for char in board_string:
+                log.debug(f'Processing {char}...')
+                if char.isdigit():
+                    position = position >> int(char)
+                    log.debug(f'Skipping {int(char)} spaces...')
+                elif char.isalpha():
+                    if char == 'K':
+                        log.debug(f'Adding a WHITE KING to {int(log2(position))}...')
+                        self.WHITE_KINGS |= position
+                    elif char == 'k':
+                        log.debug(f'Adding a BLACK KING to {int(log2(position))}...')
+                        self.BLACK_KINGS |= position
+                    if char == 'Q':
+                        log.debug(f'Adding a WHITE QUEEN to {int(log2(position))}...')
+                        self.WHITE_QUEENS |= position
+                    elif char == 'q':
+                        log.debug(f'Adding a BLACK QUEEN to {int(log2(position))}...')
+                        self.BLACK_QUEENS |= position
+                    if char == 'R':
+                        log.debug(f'Adding a WHITE ROOK to {int(log2(position))}...')
+                        self.WHITE_ROOKS |= position
+                    elif char == 'r':
+                        log.debug(f'Adding a BLACK ROOK to {int(log2(position))}...')
+                        self.BLACK_ROOKS |= position
+                    if char == 'B':
+                        log.debug(f'Adding a WHITE BISHOP to {int(log2(position))}...')
+                        self.WHITE_BISHOPS |= position
+                    elif char == 'b':
+                        log.debug(f'Adding a BLACK BISHOP to {int(log2(position))}...')
+                        self.BLACK_BISHOPS |= position
+                    if char == 'N':
+                        log.debug(f'Adding a WHITE KNIGHT to {int(log2(position))}...')
+                        self.WHITE_KNIGHTS |= position
+                    elif char == 'n':
+                        log.debug(f'Adding a BLACK KNIGHT to {int(log2(position))}...')
+                        self.BLACK_KNIGHTS |= position
+                    if char == 'P':
+                        log.debug(f'Adding a WHITE PAWN to {int(log2(position))}...')
+                        self.WHITE_PAWNS |= position
+                    elif char == 'p':
+                        log.debug(f'Adding a BLACK PAWN to {int(log2(position))}...')
+                        self.BLACK_PAWNS |= position
+                    elif char == '/':
+                        continue
+
+                    if char != '/':
+                        position = position >> 1
+
+        def process_castling(castling: str) -> None:
+            if not castling:
+                return
+            log.info('Need to handle castling here...')
+
+        process_board_layout(board_string=board_string)
+        process_castling(castling=castling)
+
+        BitBoardChess.print_bitboard(self.BLACK_PAWNS)
+        BitBoardChess.print_bitboard(self.WHITE_PAWNS)
+    
     def setup_horizontal_and_vertical_masks(self) -> None:
         log.debug('Generating horizontal and vertical masks...')
         rank_base_mask = 0b11111111
