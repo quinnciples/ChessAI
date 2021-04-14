@@ -770,6 +770,45 @@ class BitBoardChess:
                     self.BLACK_QUEENS &= ~end_mask
                 elif self.BLACK_KINGS & start_mask:
                     self.BLACK_KINGS &= ~end_mask
+        elif  piece_color == BitBoardChess.BLACK:
+            # BitBoardChess.print_bitboard(start_mask)
+            # BitBoardChess.print_bitboard(end_mask)
+            if self.BLACK_PAWNS & start_mask:
+                self.BLACK_PAWNS &= ~start_mask
+                self.BLACK_PAWNS |= end_mask
+            elif self.BLACK_KNIGHTS & start_mask:
+                self.BLACK_KNIGHTS &= ~start_mask
+                self.BLACK_KNIGHTS |= end_mask
+            elif self.BLACK_BISHOPS & start_mask:
+                self.BLACK_BISHOPS &= ~start_mask
+                self.BLACK_BISHOPS |= end_mask
+            elif self.BLACK_ROOKS & start_mask:
+                self.BLACK_ROOKS &= ~start_mask
+                self.BLACK_ROOKS |= end_mask
+            elif self.BLACK_QUEENS & start_mask:
+                self.BLACK_QUEENS &= ~start_mask
+                self.BLACK_QUEENS |= end_mask
+            elif self.BLACK_KINGS & start_mask:
+                self.BLACK_KINGS &= ~start_mask
+                self.BLACK_KINGS |= end_mask
+            else:
+                raise Exception('Move not found on board.')
+                return
+
+            # Check for captures
+            if self.WHITE_PIECES & end_mask:
+                if self.WHITE_PAWNS & start_mask:
+                    self.WHITE_PAWNS &= ~end_mask
+                elif self.WHITE_KNIGHTS & start_mask:
+                    self.WHITE_KNIGHTS &= ~end_mask
+                elif self.WHITE_BISHOPS & start_mask:
+                    self.WHITE_BISHOPS &= ~end_mask
+                elif self.WHITE_ROOKS & start_mask:
+                    self.WHITE_ROOKS &= ~end_mask
+                elif self.WHITE_QUEENS & start_mask:
+                    self.WHITE_QUEENS &= ~end_mask
+                elif self.WHITE_KINGS & start_mask:
+                    self.WHITE_KINGS &= ~end_mask
 
 
 
