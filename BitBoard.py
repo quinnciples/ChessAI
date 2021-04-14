@@ -163,9 +163,9 @@ class BitBoardChess:
         process_board_layout(board_string=board_string)
         process_castling(castling=castling)
 
-        BitBoardChess.print_bitboard(self.BLACK_PAWNS)
-        BitBoardChess.print_bitboard(self.WHITE_PAWNS)
-    
+        log.info(f'BLACK PIECES: {self.BLACK_PIECES:064b}')
+        log.info(f'WHITE PIECES: {self.WHITE_PIECES:064b}')
+
     def setup_horizontal_and_vertical_masks(self) -> None:
         log.debug('Generating horizontal and vertical masks...')
         rank_base_mask = 0b11111111
