@@ -1,8 +1,3 @@
-"""
-TO-DO
-    Modify the up-down movement code to use a "movement mask" argument, and isolate this code
-"""
-
 from bcolors import bcolors
 from math import log2
 import logging
@@ -69,25 +64,24 @@ class BitBoardChess:
         self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
 
     def clear(self) -> None:
-        self.WHITE_PAWNS =   0
-        self.WHITE_ROOKS =   0
-        self.WHITE_KNIGHTS = 0
-        self.WHITE_BISHOPS = 0
-        self.WHITE_QUEENS =  0
-        self.WHITE_KINGS =   0
+        self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
-        self.BLACK_PAWNS =   0
-        self.BLACK_ROOKS =   0
-        self.BLACK_KNIGHTS = 0
-        self.BLACK_BISHOPS = 0
-        self.BLACK_QUEENS =  0
-        self.BLACK_KINGS =   0
+        self.BLACK_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
         self.CASTLING = {'K': 0, 'Q': 0, 'k': 0, 'q': 0}
 
     def load_from_fen_string(self, fen_string: str) -> None:
         keys = fen_string.split(' ')
-        print(keys)
         board_string, player_turn, castling, en_passant, half_turns, full_turns = '', 'w', '-', '-', 0, 0
         board_string = keys[0]
         if len(keys) >= 2:
@@ -100,12 +94,11 @@ class BitBoardChess:
             half_turns = int(keys[4])
         if len(keys) >= 6:
             half_turns = int(keys[5])
-        print(board_string, player_turn, castling, en_passant, half_turns, full_turns)
+        log.info(f'Processing: {board_string}, {player_turn}, {castling}, {en_passant}, {half_turns}, {full_turns}')
 
         def process_board_layout(board_string):
             log.debug(f'Loading FEN string {board_string}...')
-            position = 0 | (1 << 63)
-            BitBoardChess.print_bitboard(position)
+            position = BitBoardChess.convert_position_to_mask(0)
             self.clear()
             for char in board_string:
                 log.debug(f'Processing {char}...')
@@ -156,15 +149,63 @@ class BitBoardChess:
                         position = position >> 1
 
         def process_castling(castling: str) -> None:
-            if not castling:
-                return
-            log.info('Need to handle castling here...')
+            for key in self.CASTLING.keys():
+                if key in castling:
+                    self.CASTLING[key] = 1
+                else:
+                    self.CASTLING[key] = 0
+            log.info(f'Setting castling of {castling} to: {self.CASTLING}')   
 
         process_board_layout(board_string=board_string)
         process_castling(castling=castling)
+        log.info('Need to handle en passant...')
+        log.info('Need to handle half turns...')
+        log.info('Need to handle full turns...')
 
         log.info(f'BLACK PIECES: {self.BLACK_PIECES:064b}')
         log.info(f'WHITE PIECES: {self.WHITE_PIECES:064b}')
+
+    def print_board(self) -> None:
+        print('-' * 41)
+        for board_position in range(64):
+            print('| ' + self.get_piece_label(board_position) + ' ', end='')
+            if (board_position + 1) % 8 == 0:
+                print(f'| {8 - ((board_position // 8))}')
+                print('-' * 41)
+        print('- A -- B -- C -- D -- E -- F -- G -- H -')
+        print()
+        # print(self.fen_key)
+        print()
+
+    def get_piece_label(self, position: int) -> str:
+        """
+        """
+        position_mask = BitBoardChess.convert_position_to_mask(position)
+        # Determine color
+        if self.BLACK_PIECES & position_mask:
+            piece_label = bcolors.CBEIGE2 + 'B'
+        elif self.WHITE_PIECES & position_mask:
+            piece_label = 'W'
+        else:
+            return '  '
+
+        if (self.BLACK_PAWNS | self.WHITE_PAWNS) & position_mask:
+            piece_label += 'P'
+        elif (self.BLACK_KNIGHTS | self.WHITE_KNIGHTS) & position_mask:
+            piece_label += 'N'
+        elif (self.BLACK_BISHOPS | self.WHITE_BISHOPS) & position_mask:
+            piece_label += 'B'
+        elif (self.BLACK_ROOKS | self.WHITE_ROOKS) & position_mask:
+            piece_label += 'R'
+        elif (self.BLACK_QUEENS | self.WHITE_QUEENS) & position_mask:
+            piece_label += 'Q'
+        elif (self.BLACK_KINGS | self.WHITE_KINGS) & position_mask:
+            piece_label += 'K'
+
+        if self.BLACK_PIECES & position_mask:
+            piece_label += bcolors.ENDC
+        return piece_label
+
 
     def setup_horizontal_and_vertical_masks(self) -> None:
         log.debug('Generating horizontal and vertical masks...')
@@ -583,6 +624,20 @@ class BitBoardChess:
 
         return move_mask
 
+    def process_castling_moves(self, piece_color: int) -> list:
+        castling_options = []
+        if piece_color == BitBoardChess.WHITE:
+            if self.CASTLING['K']:
+                castling_options.append('O-O')
+            if self.CASTLING['Q']:
+                castling_options.append('O-O-O')
+        elif piece_color == BitBoardChess.BLACK:
+            if self.CASTLING['k']:
+                castling_options.append('O-O')
+            if self.CASTLING['q']:
+                castling_options.append('O-O-O')
+        return castling_options
+
     def generate_all_possible_moves(self, piece_color: int) -> list:
         all_possible_moves = []
         # ******************** Pawns ********************
@@ -635,7 +690,7 @@ class BitBoardChess:
             destinations = self.process_rook_move(rook_square, piece_color=piece_color)
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(bishop_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
 
         # ******************** Queens ********************
         for queen_square in BitBoardChess.generate_positions_from_mask(self.WHITE_QUEENS if piece_color == BitBoardChess.WHITE else self.BLACK_QUEENS):
@@ -652,11 +707,22 @@ class BitBoardChess:
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(king_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
 
         # ******************** Castling ********************
+        castling_options = self.process_castling_moves(piece_color=piece_color)
+        for castling_option in castling_options:
+            all_possible_moves.append(f'{castling_option}')
 
         log.info(f"""{len(all_possible_moves)} moves generated for {"WHITE" if piece_color == BitBoardChess.WHITE else "BLACK"}: {all_possible_moves}""")
 
 
 if __name__ == '__main__':
     chess_board = BitBoardChess()
+    chess_board.print_board()
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
+    # https://www.chessprogramming.org/Encoding_Moves
+    chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
+    chess_board.print_board()
+    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
+    chess_board.load_from_fen_string(fen_string="R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1")
+    chess_board.print_board()
+    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
