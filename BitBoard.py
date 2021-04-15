@@ -1,7 +1,8 @@
 """
 To do - handle pawn promotion
 NEED TO MAKE SURE EN PASSANT IS HANDLED CORRECTLY - LOOK AT REAL FEN STRINGS LIKE THIS -- rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 -- after 1 e4
-
+Evalute function
+Search function
 """
 
 from bcolors import bcolors
@@ -44,6 +45,14 @@ class BitBoardChess:
     BLACK_PIECE_ATTRIBUTES = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS']
     WHITE_PIECE_ATTRIBUTES = ['WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS']
 
+    PUSH_ITEMS = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS',
+                  'WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS',
+                  'EN_PASSANT', 'CASTLING', 'FULL_MOVES', 'HALF_MOVES']
+
+    POP_ITEMS = ['HALF_MOVES', 'FULL_MOVES', 'CASTLING', 'EN_PASSANT',
+                 'WHITE_KINGS', 'WHITE_QUEENS', 'WHITE_ROOKS', 'WHITE_BISHOPS', 'WHITE_KNIGHTS', 'WHITE_PAWNS',
+                 'BLACK_KINGS', 'BLACK_QUEENS', 'BLACK_ROOKS', 'BLACK_BISHOPS', 'BLACK_KNIGHTS', 'BLACK_PAWNS']
+
     def __init__(self) -> None:
         self.RANK_MASKS = [0] * 8
         self.FILE_MASKS = [0] * 8
@@ -53,6 +62,7 @@ class BitBoardChess:
         self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
         self.FULL_MOVES = 0
         self.HALF_MOVES = 0
+        self.GAME_STACK = []
         self.setup_horizontal_and_vertical_masks()
         self.setup_uldr_diagonal_and_urdl_diagonal_masks()
         self.reset()
@@ -79,6 +89,8 @@ class BitBoardChess:
         self.FULL_MOVES = 0
         self.HALF_MOVES = 0
 
+        self.GAME_STACK.clear()
+
     def clear(self) -> None:
         self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
@@ -100,6 +112,8 @@ class BitBoardChess:
 
         self.FULL_MOVES = 0
         self.HALF_MOVES = 0
+
+        self.GAME_STACK.clear()
 
     def load_from_fen_string(self, fen_string: str) -> None:
         keys = fen_string.split(' ')
@@ -790,7 +804,9 @@ class BitBoardChess:
         return all_possible_moves
 
     def apply_move(self, move: str) -> None:
-        # Save settings?
+        """
+        Do I need the capture checks? Can I just & ~ the whole thing?
+        """
         start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
         end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
         start_mask = BitBoardChess.convert_position_to_mask(start_square)
@@ -842,6 +858,19 @@ class BitBoardChess:
 
         return
 
+    def save_state(self) -> None:
+        # board_state = tuple(self.__getattribute__(attribute) for attribute in BitBoardChess.PUSH_ITEMS)
+        board_state = {attribute: self.__getattribute__(attribute) for attribute in BitBoardChess.PUSH_ITEMS}
+        self.GAME_STACK.append(board_state)      
+
+    def load_state(self) -> None:
+        board_state = self.GAME_STACK.pop()
+        # for idx, item in enumerate(BitBoardChess.PUSH_ITEMS):
+        #     self.__setattr__(item, board_state[idx])
+        for attribute, value in board_state.items():
+            self.__setattr__(attribute, value)
+
+
 
 if __name__ == '__main__':
     chess_board = BitBoardChess()
@@ -862,8 +891,15 @@ if __name__ == '__main__':
     chess_board.print_board()
     BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
     print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
-    print(chess_board.__dict__.keys())
-    print(log)
+    chess_board.save_state()
+    print(chess_board.GAME_STACK)
+    chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_11110000_00111100_00001111
+    chess_board.BLACK_PAWNS = 0b11111111_10101010_01010101_00000000_00000000_00000000_00000000_00000000
+    chess_board.print_board()
+    chess_board.load_state()
+    print(chess_board.GAME_STACK)
+    chess_board.print_board()
+
     # chess_board.apply_move('e7e5')
     # chess_board.print_board()
     # chess_board.apply_move('d4e5')
