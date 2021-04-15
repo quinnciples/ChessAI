@@ -1,6 +1,7 @@
 """
 To do - handle pawn promotion
-RESET EN PASSANT AT THE CORRECT POINT DURING A TURN
+NEED TO MAKE SURE EN PASSANT IS HANDLED CORRECTLY - LOOK AT REAL FEN STRINGS LIKE THIS -- rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 -- after 1 e4
+
 """
 
 from bcolors import bcolors
@@ -51,6 +52,8 @@ class BitBoardChess:
         self.ULDR_DIAGONAL_MASKS = [0] * 64
         self.URDL_DIAGONAL_MASKS = [0] * 64
         self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
+        self.FULL_MOVES = 0
+        self.HALF_MOVES = 0
         self.setup_horizontal_and_vertical_masks()
         self.setup_uldr_diagonal_and_urdl_diagonal_masks()
         self.reset()
@@ -74,6 +77,9 @@ class BitBoardChess:
 
         self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
 
+        self.FULL_MOVES = 0
+        self.HALF_MOVES = 0
+
     def clear(self) -> None:
         self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
@@ -93,9 +99,12 @@ class BitBoardChess:
 
         self.CASTLING = {'K': 0, 'Q': 0, 'k': 0, 'q': 0}
 
+        self.FULL_MOVES = 0
+        self.HALF_MOVES = 0
+
     def load_from_fen_string(self, fen_string: str) -> None:
         keys = fen_string.split(' ')
-        board_string, player_turn, castling, en_passant, half_turns, full_turns = '', 'w', '-', '-', 0, 0
+        board_string, player_turn, castling, en_passant, half_moves, full_moves = '', 'w', '-', '-', 0, 0
         board_string = keys[0]
         if len(keys) >= 2:
             player_turn = keys[1]
@@ -104,10 +113,10 @@ class BitBoardChess:
         if len(keys) >= 4:
             en_passant = keys[3]
         if len(keys) >= 5:
-            half_turns = int(keys[4])
+            half_moves = int(keys[4])
         if len(keys) >= 6:
-            half_turns = int(keys[5])
-        log.info(f'Processing: {board_string}, {player_turn}, {castling}, {en_passant}, {half_turns}, {full_turns}')
+            full_moves = int(keys[5])
+        log.info(f'Processing: {board_string}, {player_turn}, {castling}, {en_passant}, {half_moves}, {full_moves}')
 
         def process_board_layout(board_string):
             log.debug(f'Loading FEN string {board_string}...')
@@ -169,11 +178,17 @@ class BitBoardChess:
                     self.CASTLING[key] = 0
             log.info(f'Setting castling of {castling} to: {self.CASTLING}')
 
+        def process_en_passant(en_passant: str) -> None:
+            self.EN_PASSANT = 0
+            if len(en_passant) == 2:
+                en_passant_board_position = BitBoardChess.convert_algebraic_notation_to_position(en_passant)
+                self.EN_PASSANT = BitBoardChess.convert_position_to_mask(en_passant_board_position)
+
         process_board_layout(board_string=board_string)
         process_castling(castling=castling)
-        log.info('Need to handle en passant...')
-        log.info('Need to handle half turns...')
-        log.info('Need to handle full turns...')
+        process_en_passant(en_passant=en_passant)
+        self.HALF_MOVES = half_moves
+        self.FULL_MOVES = full_moves
 
         log.info(f'BLACK PIECES: {self.BLACK_PIECES:064b}')
         log.info(f'WHITE PIECES: {self.WHITE_PIECES:064b}')
@@ -318,6 +333,7 @@ class BitBoardChess:
         """
         Converts a two-character algebraic notation (b2, etc) to the board position index.
         """
+        algebraic_notation = algebraic_notation.lower()
         file = ord(algebraic_notation[0]) - 97
         rank = int(algebraic_notation[1])
         rank = 8 - rank
@@ -547,6 +563,8 @@ class BitBoardChess:
 
         CAN WE DO THESE ALL AT ONCE?
 
+        Do we do (self.BLACK_PIECES | self.EN_PASSANT) and (self.WHITE_PIECES | self.EN_PASSANT) ???
+
         """
         # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
         initial_position = 0 | 1 << (63 - board_position)
@@ -578,6 +596,33 @@ class BitBoardChess:
         elif piece_color == BitBoardChess.BLACK:
             # Moving down the board, but not to the last rank -- promotion is handled separately
             move_mask = (initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.WHITE_PIECES & ~BitBoardChess.RANK_1 & ~BitBoardChess.FILE_A
+        # BitBoardChess.print_bitboard(move_mask)
+        return move_mask
+
+    def process_pawn_capture_en_passant(self, board_position: int, piece_color: int) -> int:
+        if not self.EN_PASSANT:
+            return 0
+
+        # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
+        initial_position = 0 | 1 << (63 - board_position)
+        move_mask = 0
+        # Left
+        if piece_color == BitBoardChess.WHITE:
+            # Moving up the board, but not to the last rank -- promotion is handled separately
+            # Can not end up in H file as WHITE after capturing to the LEFT
+            move_mask |= (initial_position << 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_H and initial_position & BitBoardChess.RANK_5
+        elif piece_color == BitBoardChess.BLACK:
+            # Moving down the board, but not to the last rank -- promotion is handled separately
+            move_mask |= (initial_position >> 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_H and initial_position & BitBoardChess.RANK_4
+
+        # Right
+        if piece_color == BitBoardChess.WHITE:
+            # Moving up the board, but not to the last rank -- promotion is handled separately
+            # Can not end up in H file as WHITE after capturing to the LEFT
+            move_mask |= (initial_position << 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_A and initial_position & BitBoardChess.RANK_5
+        elif piece_color == BitBoardChess.BLACK:
+            # Moving down the board, but not to the last rank -- promotion is handled separately
+            move_mask |= (initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_A and initial_position & BitBoardChess.RANK_4
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
@@ -684,6 +729,13 @@ class BitBoardChess:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
         # Pawn captures - En Passant
+        if self.EN_PASSANT:
+            for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
+                destinations = self.process_pawn_capture_en_passant(pawn_square, piece_color=piece_color)
+                if destinations:
+                    for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                        all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)} EN PASSANT BITCHES!!!')        
+
         # To do
         # Promotion
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
@@ -756,7 +808,7 @@ class BitBoardChess:
                     break
 
             if self.WHITE_PAWNS & end_mask and ((end_mask >> 16) & start_mask):
-                self.EN_PASSANT = end_mask
+                self.EN_PASSANT = (end_mask >> 8)
                 log.debug(f'En Passant move detected: {move}.')
 
             # Check for captures
@@ -776,7 +828,7 @@ class BitBoardChess:
                     break
 
             if self.BLACK_PAWNS & end_mask and ((end_mask << 16) & start_mask):
-                self.EN_PASSANT = end_mask
+                self.EN_PASSANT = (end_mask << 8)
                 log.debug(f'En Passant move detected: {move}.')
 
             # Check for captures
@@ -797,12 +849,28 @@ if __name__ == '__main__':
     chess_board.print_board()
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
-    chess_board.apply_move('d2d4')
+    chess_board.apply_move('e2e4')
     chess_board.print_board()
-    chess_board.apply_move('e7e5')
+    BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
+    chess_board.clear()
+    chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00001000_00000000
+    chess_board.BLACK_PAWNS = 0b00000000_10010000_00000000_00000000_00000000_00000000_00000000_00000000
     chess_board.print_board()
-    chess_board.apply_move('d4e5')
+    chess_board.apply_move('e2e4')
+    chess_board.apply_move('a7a6')
+    chess_board.apply_move('e4e5')
+    chess_board.apply_move('d7d5')
     chess_board.print_board()
+    BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
+    print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
+    # chess_board.apply_move('e7e5')
+    # chess_board.print_board()
+    # chess_board.apply_move('d4e5')
+    # chess_board.print_board()
+    # chess_board.clear()
+    # chess_board.load_from_fen_string("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
+    # chess_board.print_board()
+    # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
     # # https://www.chessprogramming.org/Encoding_Moves
     # chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
     # chess_board.print_board()
