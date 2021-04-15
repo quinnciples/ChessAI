@@ -623,19 +623,19 @@ class BitBoardChess:
         if piece_color == BitBoardChess.WHITE and initial_position & BitBoardChess.RANK_5:
             # Moving up the board, but not to the last rank -- promotion is handled separately
             # Can not end up in H file as WHITE after capturing to the LEFT
-            move_mask |= (initial_position << 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_H 
+            move_mask |= (initial_position << 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_H
         elif piece_color == BitBoardChess.BLACK and initial_position & BitBoardChess.RANK_4:
             # Moving down the board, but not to the last rank -- promotion is handled separately
-            move_mask |= (initial_position >> 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_H 
+            move_mask |= (initial_position >> 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_H
 
         # Right
         if piece_color == BitBoardChess.WHITE and initial_position & BitBoardChess.RANK_5:
             # Moving up the board, but not to the last rank -- promotion is handled separately
             # Can not end up in H file as WHITE after capturing to the LEFT
-            move_mask |= (initial_position << 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_A 
+            move_mask |= (initial_position << 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_A
         elif piece_color == BitBoardChess.BLACK and initial_position & BitBoardChess.RANK_4:
             # Moving down the board, but not to the last rank -- promotion is handled separately
-            move_mask |= (initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_A 
+            move_mask |= (initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_A
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
