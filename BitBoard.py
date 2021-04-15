@@ -620,22 +620,22 @@ class BitBoardChess:
         initial_position = 0 | 1 << (63 - board_position)
         move_mask = 0
         # Left
-        if piece_color == BitBoardChess.WHITE:
+        if piece_color == BitBoardChess.WHITE and initial_position & BitBoardChess.RANK_5:
             # Moving up the board, but not to the last rank -- promotion is handled separately
             # Can not end up in H file as WHITE after capturing to the LEFT
-            move_mask |= (initial_position << 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_H and initial_position & BitBoardChess.RANK_5
-        elif piece_color == BitBoardChess.BLACK:
+            move_mask |= (initial_position << 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_H 
+        elif piece_color == BitBoardChess.BLACK and initial_position & BitBoardChess.RANK_4:
             # Moving down the board, but not to the last rank -- promotion is handled separately
-            move_mask |= (initial_position >> 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_H and initial_position & BitBoardChess.RANK_4
+            move_mask |= (initial_position >> 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_H 
 
         # Right
-        if piece_color == BitBoardChess.WHITE:
+        if piece_color == BitBoardChess.WHITE and initial_position & BitBoardChess.RANK_5:
             # Moving up the board, but not to the last rank -- promotion is handled separately
             # Can not end up in H file as WHITE after capturing to the LEFT
-            move_mask |= (initial_position << 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_A and initial_position & BitBoardChess.RANK_5
-        elif piece_color == BitBoardChess.BLACK:
+            move_mask |= (initial_position << 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_6 & ~BitBoardChess.FILE_A 
+        elif piece_color == BitBoardChess.BLACK and initial_position & BitBoardChess.RANK_4:
             # Moving down the board, but not to the last rank -- promotion is handled separately
-            move_mask |= (initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_A and initial_position & BitBoardChess.RANK_4
+            move_mask |= (initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EN_PASSANT & BitBoardChess.RANK_3 & ~BitBoardChess.FILE_A 
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
@@ -747,9 +747,7 @@ class BitBoardChess:
                 destinations = self.process_pawn_capture_en_passant(pawn_square, piece_color=piece_color)
                 if destinations:
                     for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                        all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)} EN PASSANT BITCHES!!!')        
-
-        # To do
+                        all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)} EN PASSANT BITCHES!!!')
         # Promotion
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_promotion(pawn_square, piece_color=piece_color)
@@ -889,16 +887,16 @@ if __name__ == '__main__':
     chess_board.apply_move('e4e5')
     chess_board.apply_move('d7d5')
     chess_board.print_board()
-    BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
+    # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
     print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
-    chess_board.save_state()
-    print(chess_board.GAME_STACK)
-    chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_11110000_00111100_00001111
-    chess_board.BLACK_PAWNS = 0b11111111_10101010_01010101_00000000_00000000_00000000_00000000_00000000
-    chess_board.print_board()
-    chess_board.load_state()
-    print(chess_board.GAME_STACK)
-    chess_board.print_board()
+    # chess_board.save_state()
+    # print(chess_board.GAME_STACK)
+    # chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_11110000_00111100_00001111
+    # chess_board.BLACK_PAWNS = 0b11111111_10101010_01010101_00000000_00000000_00000000_00000000_00000000
+    # chess_board.print_board()
+    # chess_board.load_state()
+    # print(chess_board.GAME_STACK)
+    # chess_board.print_board()
 
     # chess_board.apply_move('e7e5')
     # chess_board.print_board()
