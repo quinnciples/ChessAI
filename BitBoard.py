@@ -6,7 +6,6 @@ NEED TO MAKE SURE EN PASSANT IS HANDLED CORRECTLY - LOOK AT REAL FEN STRINGS LIK
 
 from bcolors import bcolors
 from math import log2
-import random
 import logging
 log = logging.getLogger(__name__)
 
@@ -863,6 +862,8 @@ if __name__ == '__main__':
     chess_board.print_board()
     BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
     print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
+    print(chess_board.__dict__.keys())
+    print(log)
     # chess_board.apply_move('e7e5')
     # chess_board.print_board()
     # chess_board.apply_move('d4e5')
