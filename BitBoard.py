@@ -1,5 +1,11 @@
+"""
+To do - handle pawn promotion
+RESET EN PASSANT AT THE CORRECT POINT DURING A TURN
+"""
+
 from bcolors import bcolors
 from math import log2
+import random
 import logging
 log = logging.getLogger(__name__)
 
@@ -35,6 +41,9 @@ class BitBoardChess:
     BLACK = 0
     WHITE = 1
 
+    BLACK_PIECE_ATTRIBUTES = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS']
+    WHITE_PIECE_ATTRIBUTES = ['WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS']
+
     def __init__(self) -> None:
         self.RANK_MASKS = [0] * 8
         self.FILE_MASKS = [0] * 8
@@ -61,6 +70,8 @@ class BitBoardChess:
         self.BLACK_QUEENS =  0b00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_KINGS =   0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
+        self.EN_PASSANT =    0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+
         self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
 
     def clear(self) -> None:
@@ -77,6 +88,8 @@ class BitBoardChess:
         self.BLACK_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+
+        self.EN_PASSANT =    0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
         self.CASTLING = {'K': 0, 'Q': 0, 'k': 0, 'q': 0}
 
@@ -725,91 +738,58 @@ class BitBoardChess:
         log.info(f"""{len(all_possible_moves)} moves generated for {"WHITE" if piece_color == BitBoardChess.WHITE else "BLACK"}: {all_possible_moves}""")
         return all_possible_moves
 
-    def apply_move(self, move: str, piece_color: int) -> None:
+    def apply_move(self, move: str) -> None:
         # Save settings?
         start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
         end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
         start_mask = BitBoardChess.convert_position_to_mask(start_square)
         end_mask = BitBoardChess.convert_position_to_mask(end_square)
-        if piece_color == BitBoardChess.WHITE:
-            # BitBoardChess.print_bitboard(start_mask)
-            # BitBoardChess.print_bitboard(end_mask)
-            if self.WHITE_PAWNS & start_mask:
-                self.WHITE_PAWNS &= ~start_mask
-                self.WHITE_PAWNS |= end_mask
-            elif self.WHITE_KNIGHTS & start_mask:
-                self.WHITE_KNIGHTS &= ~start_mask
-                self.WHITE_KNIGHTS |= end_mask
-            elif self.WHITE_BISHOPS & start_mask:
-                self.WHITE_BISHOPS &= ~start_mask
-                self.WHITE_BISHOPS |= end_mask
-            elif self.WHITE_ROOKS & start_mask:
-                self.WHITE_ROOKS &= ~start_mask
-                self.WHITE_ROOKS |= end_mask
-            elif self.WHITE_QUEENS & start_mask:
-                self.WHITE_QUEENS &= ~start_mask
-                self.WHITE_QUEENS |= end_mask
-            elif self.WHITE_KINGS & start_mask:
-                self.WHITE_KINGS &= ~start_mask
-                self.WHITE_KINGS |= end_mask
-            else:
-                raise Exception('Move not found on board.')
-                return
+        self.EN_PASSANT = 0
+
+        if self.WHITE_PIECES & start_mask:
+            piece_color = BitBoardChess.WHITE
+            for PIECE_BOARD in BitBoardChess.WHITE_PIECE_ATTRIBUTES:
+                if self.__getattribute__(PIECE_BOARD) & start_mask:
+                    log.debug(f'Found WHITE piece in {PIECE_BOARD}.')
+                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) & ~start_mask)
+                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
+                    break
+
+            if self.WHITE_PAWNS & end_mask and ((end_mask >> 16) & start_mask):
+                self.EN_PASSANT = end_mask
+                log.debug(f'En Passant move detected: {move}.')
 
             # Check for captures
             if self.BLACK_PIECES & end_mask:
-                if self.BLACK_PAWNS & end_mask:
-                    self.BLACK_PAWNS &= ~end_mask
-                elif self.BLACK_KNIGHTS & end_mask:
-                    self.BLACK_KNIGHTS &= ~end_mask
-                elif self.BLACK_BISHOPS & end_mask:
-                    self.BLACK_BISHOPS &= ~end_mask
-                elif self.BLACK_ROOKS & end_mask:
-                    self.BLACK_ROOKS &= ~end_mask
-                elif self.BLACK_QUEENS & end_mask:
-                    self.BLACK_QUEENS &= ~end_mask
-                elif self.BLACK_KINGS & end_mask:
-                    self.BLACK_KINGS &= ~end_mask
+                for CAPTURE_BOARD in BitBoardChess.BLACK_PIECE_ATTRIBUTES:
+                    if self.__getattribute__(CAPTURE_BOARD) & end_mask:
+                        self.__setattr__(CAPTURE_BOARD, self.__getattribute__(CAPTURE_BOARD) & ~end_mask)
+                        log.debug(f'Found BLACK piece being captured in {CAPTURE_BOARD}.')
 
-        elif piece_color == BitBoardChess.BLACK:
-            # BitBoardChess.print_bitboard(start_mask)
-            # BitBoardChess.print_bitboard(end_mask)
-            if self.BLACK_PAWNS & start_mask:
-                self.BLACK_PAWNS &= ~start_mask
-                self.BLACK_PAWNS |= end_mask
-            elif self.BLACK_KNIGHTS & start_mask:
-                self.BLACK_KNIGHTS &= ~start_mask
-                self.BLACK_KNIGHTS |= end_mask
-            elif self.BLACK_BISHOPS & start_mask:
-                self.BLACK_BISHOPS &= ~start_mask
-                self.BLACK_BISHOPS |= end_mask
-            elif self.BLACK_ROOKS & start_mask:
-                self.BLACK_ROOKS &= ~start_mask
-                self.BLACK_ROOKS |= end_mask
-            elif self.BLACK_QUEENS & start_mask:
-                self.BLACK_QUEENS &= ~start_mask
-                self.BLACK_QUEENS |= end_mask
-            elif self.BLACK_KINGS & start_mask:
-                self.BLACK_KINGS &= ~start_mask
-                self.BLACK_KINGS |= end_mask
-            else:
-                raise Exception('Move not found on board.')
-                return
+        elif self.BLACK_PIECES & start_mask:
+            piece_color = BitBoardChess.BLACK
+            for PIECE_BOARD in BitBoardChess.BLACK_PIECE_ATTRIBUTES:
+                if self.__getattribute__(PIECE_BOARD) & start_mask:
+                    log.debug(f'Found BLACK piece in {PIECE_BOARD}.')
+                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) & ~start_mask)
+                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
+                    break
+
+            if self.BLACK_PAWNS & end_mask and ((end_mask << 16) & start_mask):
+                self.EN_PASSANT = end_mask
+                log.debug(f'En Passant move detected: {move}.')
 
             # Check for captures
             if self.WHITE_PIECES & end_mask:
-                if self.WHITE_PAWNS & end_mask:
-                    self.WHITE_PAWNS &= ~end_mask
-                elif self.WHITE_KNIGHTS & end_mask:
-                    self.WHITE_KNIGHTS &= ~end_mask
-                elif self.WHITE_BISHOPS & end_mask:
-                    self.WHITE_BISHOPS &= ~end_mask
-                elif self.WHITE_ROOKS & end_mask:
-                    self.WHITE_ROOKS &= ~end_mask
-                elif self.WHITE_QUEENS & end_mask:
-                    self.WHITE_QUEENS &= ~end_mask
-                elif self.WHITE_KINGS & end_mask:
-                    self.WHITE_KINGS &= ~end_mask
+                for CAPTURE_BOARD in BitBoardChess.WHITE_PIECE_ATTRIBUTES:
+                    if self.__getattribute__(CAPTURE_BOARD) & end_mask:
+                        self.__setattr__(CAPTURE_BOARD, self.__getattribute__(CAPTURE_BOARD) & ~end_mask)
+                        log.debug(f'Found WHITE piece being captured in {CAPTURE_BOARD}.')
+
+        else:
+            raise Exception('Move not found on board.')
+
+        return
 
 
 if __name__ == '__main__':
@@ -817,6 +797,12 @@ if __name__ == '__main__':
     chess_board.print_board()
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
     chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
+    chess_board.apply_move('d2d4')
+    chess_board.print_board()
+    chess_board.apply_move('e7e5')
+    chess_board.print_board()
+    chess_board.apply_move('d4e5')
+    chess_board.print_board()
     # # https://www.chessprogramming.org/Encoding_Moves
     # chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
     # chess_board.print_board()
@@ -824,12 +810,17 @@ if __name__ == '__main__':
     # chess_board.load_from_fen_string(fen_string="R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1")
     # chess_board.print_board()
     # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
-    chess_board.reset()
-    chess_board.apply_move('e2e4', piece_color=BitBoardChess.WHITE)
-    chess_board.apply_move('d7d5', piece_color=BitBoardChess.BLACK)
-    chess_board.print_board()
-    chess_board.apply_move('e4d5', piece_color=BitBoardChess.WHITE)
-    chess_board.print_board()
+    # chess_board.reset()
+    # color = BitBoardChess.WHITE
+    # for turns in range(20):
+    #     moves = chess_board.generate_all_possible_moves(piece_color=color)
+    #     if moves:
+    #         move = random.choice(moves)
+    #         chess_board.apply_move(move, piece_color=color)
+    #     color = BitBoardChess.WHITE if color == BitBoardChess.BLACK else BitBoardChess.BLACK
+    # chess_board.print_board()
+    # print(turns + 1)
+
 
     # chess_board.reset()
     # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE):
