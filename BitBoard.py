@@ -7,12 +7,12 @@ Search function
 """
 
 from bcolors import bcolors
-from math import log2
+from math import log2, inf
 import logging
 import configparser
 config = configparser.ConfigParser()
 config.read('config.ini')
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.CRITICAL,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -59,7 +59,7 @@ class BitBoardChess:
 
     SAVE_ORDER = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS',
                   'WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS',
-                  'EN_PASSANT', 'CASTLING', 'FULL_MOVES', 'HALF_MOVES']
+                  'EN_PASSANT', 'CASTLING', 'FULL_MOVES', 'HALF_MOVES', 'PLAYER_TURN']
 
     # POP_ITEMS = ['HALF_MOVES', 'FULL_MOVES', 'CASTLING', 'EN_PASSANT',
     #              'WHITE_KINGS', 'WHITE_QUEENS', 'WHITE_ROOKS', 'WHITE_BISHOPS', 'WHITE_KNIGHTS', 'WHITE_PAWNS',
@@ -89,6 +89,25 @@ class BitBoardChess:
         self.setup_piece_masks()
         self.reset()
 
+    def test(self) -> None:
+        self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100100
+        self.WHITE_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000
+
+        self.BLACK_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_BISHOPS = 0b00100100_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_KINGS =   0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        
+    
+    
+    
+    
     def reset(self) -> None:
         self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000
         self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_10000001
@@ -275,7 +294,7 @@ class BitBoardChess:
 
         if self.BLACK_PIECES & position_mask:
             piece_label += bcolors.ENDC
-        return piece_label    
+        return piece_label
 
     def setup_horizontal_and_vertical_masks(self) -> None:
         log.debug('Generating horizontal and vertical masks...')
@@ -333,13 +352,18 @@ class BitBoardChess:
     def EMPTY_SQUARES(self) -> int:
         return ~self.ALL_PIECES
 
-    @property
-    def LAZY_CHECK_WHITE_KING(self) -> bool:
+    def player_is_in_check(self, player_color: int) -> bool:
         """
         Determines if any BLACK piece is threatening the WHITE King, without looking at any pieces which may be in the way.
         """
         log.debug('Check test start.')
-        check_board = 0
+        if player_color == BitBoardChess.WHITE:
+            next_player_color = BitBoardChess.BLACK
+        elif player_color == BitBoardChess.BLACK:
+            next_player_color = BitBoardChess.WHITE
+        else:
+            raise Exception('Nope')
+        # check_board = 0
         # # ******************** Pawns ********************
         # check_board |= (self.BLACK_PAWNS >> 7) & ~BitBoardChess.FILE_H
         # check_board |= (self.BLACK_PAWNS >> 9) & ~BitBoardChess.FILE_A
@@ -359,11 +383,13 @@ class BitBoardChess:
         # for king_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KINGS):
         #     check_board |= self.KING_MOVE_MASKS[king_square]
         # log.debug('Check test END.')
-        _, check_board = self.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
+        _, check_board = self.generate_all_possible_moves(piece_color=next_player_color)
         # log.debug('Check test END.')
 
-        BitBoardChess.print_bitboard(check_board)
-        if self.WHITE_KINGS & check_board:
+        # BitBoardChess.print_bitboard(check_board)
+        if player_color == BitBoardChess.WHITE and self.WHITE_KINGS & check_board:
+            return True
+        elif player_color == BitBoardChess.BLACK and self.BLACK_KINGS & check_board:
             return True
         return False
 
@@ -561,7 +587,7 @@ class BitBoardChess:
         Results are modified for captures of the opponent's piece.
         """
         # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
-        move_mask = self.generate_diagonal_uldr_moves(board_position=board_position, piece_color=piece_color) | self.generate_diagonal_urdl_moves(board_position=board_position, piece_color=piece_color)
+        move_mask = (self.generate_diagonal_uldr_moves(board_position=board_position, piece_color=piece_color) | self.generate_diagonal_urdl_moves(board_position=board_position, piece_color=piece_color))
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
@@ -827,7 +853,8 @@ class BitBoardChess:
                 destinations = self.process_pawn_capture_en_passant(pawn_square, piece_color=piece_color)
                 if destinations:
                     for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                        all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)} EN PASSANT BITCHES!!!')
+                        print('SHOULDNT SEE ME')
+                        all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
                         all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
         # Promotion
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
@@ -946,7 +973,7 @@ class BitBoardChess:
     def save_state(self) -> None:
         # board_state = tuple(self.__getattribute__(attribute) for attribute in BitBoardChess.PUSH_ITEMS)
         board_state = {attribute: self.__getattribute__(attribute) for attribute in BitBoardChess.SAVE_ORDER}
-        self.GAME_STACK.append(board_state)      
+        self.GAME_STACK.append(board_state)
 
     def load_state(self) -> None:
         board_state = self.GAME_STACK.pop()
@@ -955,18 +982,128 @@ class BitBoardChess:
         for attribute, value in board_state.items():
             self.__setattr__(attribute, value)
 
+    def evaluate(self) -> int:
+        """
+        """
+        PAWN_WEIGHT = 100
+        KNIGHT_WEIGHT = 300
+        BISHOP_WEIGHT = 300
+        ROOK_WEIGHT = 500
+        QUEEN_WEIGHT = 800
+
+        pawn_score = sum([1 * PAWN_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS)]) - sum([1 * PAWN_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.BLACK_PAWNS)])
+        knight_score = sum([1 * KNIGHT_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.WHITE_KNIGHTS)]) - sum([1 * KNIGHT_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.BLACK_KNIGHTS)])
+        bishop_score = sum([1 * BISHOP_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.WHITE_BISHOPS)]) - sum([1 * BISHOP_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.BLACK_BISHOPS)])
+        rook_score = sum([1 * ROOK_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.WHITE_ROOKS)]) - sum([1 * ROOK_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.BLACK_ROOKS)])
+        queen_score = sum([1 * QUEEN_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.WHITE_QUEENS)]) - sum([1 * QUEEN_WEIGHT for _ in BitBoardChess.generate_positions_from_mask(self.BLACK_QUEENS)])
+
+        log.debug(f'{pawn_score} {knight_score} {bishop_score} {rook_score} {queen_score}')
+        return pawn_score + knight_score + bishop_score + rook_score + queen_score
+
+    def depth_search(self, depth: int) -> int:
+        """
+        """
+        if depth == 0:
+            return self.evaluate()
+
+        best_score = -inf
+
+        for move in self.generate_all_possible_moves(piece_color=self.PLAYER_TURN)[0]:
+            self.save_state()
+            self.apply_move(move=move)
+            self.PLAYER_TURN = BitBoardChess.WHITE if self.PLAYER_TURN == BitBoardChess.BLACK else BitBoardChess.BLACK
+            evaluation = self.depth_search(depth=depth - 1)
+            self.load_state()
+            if evaluation > best_score:
+                best_score = evaluation
+                best_move = move
+
+        return best_score
 
 
 if __name__ == '__main__':
     chess_board = BitBoardChess()
+    # chess_board.test()
     chess_board.print_board()
-    print(chess_board.LAZY_CHECK_WHITE_KING)
-    chess_board.apply_move('e1d3')
-    chess_board.print_board()
-    print(chess_board.LAZY_CHECK_WHITE_KING)
-    chess_board.apply_move('d8d5')
-    chess_board.print_board()
-    print(chess_board.LAZY_CHECK_WHITE_KING)
+
+
+    # total_moves = 0
+    # print('Turn 1 - White')
+    # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+    #     total_moves += 1
+    # print(total_moves)
+    # print('Turn 1 - Black')
+    # total_moves = []
+    # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+    #     chess_board.save_state()
+    #     chess_board.apply_move(move)
+    #     if not chess_board.player_is_in_check(BitBoardChess.WHITE):
+    #         for move2 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
+    #             if not chess_board.player_is_in_check(BitBoardChess.BLACK):
+    #                 total_moves.append([move, move2])
+    #     chess_board.load_state()
+    # print(len(total_moves))
+    # print('Turn 2 - White')
+    # total_moves = 0
+    # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+    #     chess_board.save_state()
+    #     chess_board.apply_move(move)
+    #     for move2 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
+    #         chess_board.save_state()
+    #         chess_board.apply_move(move2)
+    #         for move3 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+    #             total_moves += 1
+    #         chess_board.load_state()
+
+    #     chess_board.load_state()
+    # print(total_moves)
+
+    print('Turn 2 - Black')
+    total_moves = []
+    for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+        chess_board.save_state()
+        chess_board.apply_move(move)
+        if not chess_board.player_is_in_check(BitBoardChess.WHITE):
+            for move2 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
+                chess_board.save_state()
+                chess_board.apply_move(move2)
+                if not chess_board.player_is_in_check(BitBoardChess.BLACK):
+                    for move3 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+                        chess_board.save_state()
+                        chess_board.apply_move(move3)
+                        if not chess_board.player_is_in_check(BitBoardChess.WHITE):
+                            for move4 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
+                                chess_board.save_state()
+                                chess_board.apply_move(move4)
+                                if not chess_board.player_is_in_check(BitBoardChess.BLACK):
+                                    total_moves.append([move, move2, move3, move4])
+                                chess_board.load_state()
+                        chess_board.load_state()
+                chess_board.load_state()
+        chess_board.load_state()
+    print(len(total_moves))
+
+
+
+    # import csv
+    # with open('bitboard_version.csv', 'w', newline='') as f:
+    #     writer = csv.writer(f)
+    #     writer.writerows(total_moves)
+    # 1 	20
+    # 2 	400
+    # 3 	8,902
+    # 4 	197,281
+    # 5 	4,865,609
+    # 6 	119,060,324
+    # 7 	3,195,901,860
+    # 8 	84,998,978,956
+    # 9 	2,439,530,234,167
+    # 10 	69,352,859,712,417
+    
+
+
+    
+
     # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
     # chess_board.apply_move('e2e4')
     # chess_board.print_board()
@@ -982,7 +1119,6 @@ if __name__ == '__main__':
     # chess_board.print_board()
     # # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
     # print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
-
 
     # chess_board.save_state()
     # print(chess_board.GAME_STACK)
@@ -1002,9 +1138,9 @@ if __name__ == '__main__':
     # chess_board.print_board()
     # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
     # # https://www.chessprogramming.org/Encoding_Moves
-    chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
-    chess_board.print_board()
-    print(chess_board.PLAYER_TURN)
+    # chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
+    # chess_board.print_board()
+    # print(chess_board.PLAYER_TURN)
     # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
     # chess_board.load_from_fen_string(fen_string="R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1")
     # chess_board.print_board()
@@ -1019,7 +1155,6 @@ if __name__ == '__main__':
     #     color = BitBoardChess.WHITE if color == BitBoardChess.BLACK else BitBoardChess.BLACK
     # chess_board.print_board()
     # print(turns + 1)
-
 
     # chess_board.reset()
     # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE):

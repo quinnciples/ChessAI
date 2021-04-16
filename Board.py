@@ -61,29 +61,30 @@ class Board:
     def clear(self) -> None:
         self.board = [None] * 64
         self.en_passant_square = ''
+        self.history = []
 
     def reset(self) -> None:
         self.clear()
-        for column in range(1, 9):
-            self.board[Board.translatePos(row=2, column=column)] = Piece.WHITE | Piece.PAWN
-            self.board[Board.translatePos(row=7, column=column)] = Piece.BLACK | Piece.PAWN
+        # for column in range(1, 9):
+        #     self.board[Board.translatePos(row=2, column=column)] = Piece.WHITE | Piece.PAWN
+        #     self.board[Board.translatePos(row=7, column=column)] = Piece.BLACK | Piece.PAWN
 
-        self.board[0] = Piece.ROOK | Piece.BLACK
-        self.board[7] = Piece.ROOK | Piece.BLACK
-        self.board[1] = Piece.KNIGHT | Piece.BLACK
-        self.board[6] = Piece.KNIGHT | Piece.BLACK
+        # self.board[0] = Piece.ROOK | Piece.BLACK
+        # self.board[7] = Piece.ROOK | Piece.BLACK
+        # self.board[1] = Piece.KNIGHT | Piece.BLACK
+        # self.board[6] = Piece.KNIGHT | Piece.BLACK
         self.board[2] = Piece.BISHOP | Piece.BLACK
         self.board[5] = Piece.BISHOP | Piece.BLACK
-        self.board[3] = Piece.QUEEN | Piece.BLACK
+        # self.board[3] = Piece.QUEEN | Piece.BLACK
         self.board[4] = Piece.KING | Piece.BLACK
 
-        self.board[56] = Piece.ROOK | Piece.WHITE
-        self.board[63] = Piece.ROOK | Piece.WHITE
-        self.board[57] = Piece.KNIGHT | Piece.WHITE
-        self.board[62] = Piece.KNIGHT | Piece.WHITE
+        # self.board[56] = Piece.ROOK | Piece.WHITE
+        # self.board[63] = Piece.ROOK | Piece.WHITE
+        # self.board[57] = Piece.KNIGHT | Piece.WHITE
+        # self.board[62] = Piece.KNIGHT | Piece.WHITE
         self.board[58] = Piece.BISHOP | Piece.WHITE
         self.board[61] = Piece.BISHOP | Piece.WHITE
-        self.board[59] = Piece.QUEEN | Piece.WHITE
+        # self.board[59] = Piece.QUEEN | Piece.WHITE
         self.board[60] = Piece.KING | Piece.WHITE
 
         self.halfmoves = 0
@@ -160,6 +161,8 @@ class Board:
                                     piece = new_board.board[board_index] | Piece.MOVED
                                     new_board.board[board_index] = None
                                     new_board.board[move] = piece
+                                    new_board.history = [h for h in self.history]
+                                    new_board.history.append(Board.algebraic_notation(board_index=board_index) + Board.algebraic_notation(board_index=move))
                                     new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                                     # yield new_board
                                     moves.append(new_board)
@@ -175,6 +178,8 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.history = [h for h in self.history]
+                            new_board.history.append(Board.algebraic_notation(board_index=board_index) + Board.algebraic_notation(board_index=move))
                             new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
@@ -184,6 +189,8 @@ class Board:
                                 piece = new_board.board[board_index] | Piece.MOVED
                                 new_board.board[board_index] = None
                                 new_board.board[move - 8] = piece
+                                new_board.history = [h for h in self.history]
+                                new_board.history.append(Board.algebraic_notation(board_index=board_index) + Board.algebraic_notation(board_index=move))
                                 new_board.en_passant_square = Board.algebraic_notation(move - 8)
                                 new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                                 # print(new_board.fen_key)
@@ -197,6 +204,8 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.history = [h for h in self.history]
+                            new_board.history.append(Board.algebraic_notation(board_index=board_index) + Board.algebraic_notation(board_index=move))
                             new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
@@ -207,6 +216,8 @@ class Board:
                                 new_board.board[board_index] = None
                                 new_board.board[move + 8] = piece
                                 new_board.en_passant_square = Board.algebraic_notation(move + 8)
+                                new_board.history = [h for h in self.history]
+                                new_board.history.append(Board.algebraic_notation(board_index=board_index) + Board.algebraic_notation(board_index=move))
                                 new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                                 # print(new_board.fen_key)
                                 # yield new_board
@@ -226,6 +237,8 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.history = [h for h in self.history]
+                            new_board.history.append(Board.algebraic_notation(board_index=board_index) + Board.algebraic_notation(board_index=move))
                             new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
@@ -241,6 +254,8 @@ class Board:
                             piece = new_board.board[board_index] | Piece.MOVED
                             new_board.board[board_index] = None
                             new_board.board[move] = piece
+                            new_board.history = [h for h in self.history]
+                            new_board.history.append(Board.algebraic_notation(board_index=board_index) + Board.algebraic_notation(board_index=move))
                             new_board.active_color = Piece.BLACK if color & Piece.WHITE else Piece.WHITE
                             # yield new_board
                             moves.append(new_board)
