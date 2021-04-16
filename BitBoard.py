@@ -75,6 +75,7 @@ class BitBoardChess:
         self.FULL_MOVES = 0
         self.HALF_MOVES = 0
         self.GAME_STACK = []
+        self.PLAYER_TURN = BitBoardChess.WHITE
 
         self.KNIGHT_MOVE_MASKS = [0] * 64
         self.BISHOP_MOVE_MASKS = [0] * 64
@@ -112,6 +113,8 @@ class BitBoardChess:
 
         self.GAME_STACK.clear()
 
+        self.PLAYER_TURN = BitBoardChess.WHITE
+
     def clear(self) -> None:
         self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
@@ -135,6 +138,8 @@ class BitBoardChess:
         self.HALF_MOVES = 0
 
         self.GAME_STACK.clear()
+
+        self.PLAYER_TURN = BitBoardChess.WHITE
 
     def load_from_fen_string(self, fen_string: str) -> None:
         keys = fen_string.split(' ')
@@ -218,9 +223,13 @@ class BitBoardChess:
                 en_passant_board_position = BitBoardChess.convert_algebraic_notation_to_position(en_passant)
                 self.EN_PASSANT = BitBoardChess.convert_position_to_mask(en_passant_board_position)
 
+        self.clear()
         process_board_layout(board_string=board_string)
         process_castling(castling=castling)
         process_en_passant(en_passant=en_passant)
+        if player_turn.lower() not in ['w', 'b']:
+            raise Exception('Invalid player turn in fen string.')
+        self.PLAYER_TURN = BitBoardChess.WHITE if player_turn.lower() == 'w' else BitBoardChess.BLACK
         self.HALF_MOVES = half_moves
         self.FULL_MOVES = full_moves
 
@@ -329,27 +338,31 @@ class BitBoardChess:
         """
         Determines if any BLACK piece is threatening the WHITE King, without looking at any pieces which may be in the way.
         """
+        log.debug('Check test start.')
         check_board = 0
-        # ******************** Pawns ********************
-        check_board |= (self.BLACK_PAWNS >> 7) & ~BitBoardChess.FILE_H
-        check_board |= (self.BLACK_PAWNS >> 9) & ~BitBoardChess.FILE_A
-        # ******************** Knights ********************
-        for knight_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KNIGHTS):
-            check_board |= self.KNIGHT_MOVE_MASKS[knight_square]
-        # ******************** Bishops ********************
-        for bishop_square in BitBoardChess.generate_positions_from_mask(self.BLACK_BISHOPS):
-            check_board |= self.BISHOP_MOVE_MASKS[bishop_square]
-        # ******************** Rooks ********************
-        for rook_square in BitBoardChess.generate_positions_from_mask(self.BLACK_ROOKS):
-            check_board |= self.ROOK_MOVE_MASKS[rook_square]
-        # ******************** Queens ********************
-        for queen_square in BitBoardChess.generate_positions_from_mask(self.BLACK_QUEENS):
-            check_board |= self.QUEEN_MOVE_MASKS[queen_square]
-        # ******************** Kings ********************
-        for king_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KINGS):
-            check_board |= self.KING_MOVE_MASKS[king_square]
+        # # ******************** Pawns ********************
+        # check_board |= (self.BLACK_PAWNS >> 7) & ~BitBoardChess.FILE_H
+        # check_board |= (self.BLACK_PAWNS >> 9) & ~BitBoardChess.FILE_A
+        # # ******************** Knights ********************
+        # for knight_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KNIGHTS):
+        #     check_board |= self.KNIGHT_MOVE_MASKS[knight_square]
+        # # ******************** Bishops ********************
+        # for bishop_square in BitBoardChess.generate_positions_from_mask(self.BLACK_BISHOPS):
+        #     check_board |= self.BISHOP_MOVE_MASKS[bishop_square]
+        # # ******************** Rooks ********************
+        # for rook_square in BitBoardChess.generate_positions_from_mask(self.BLACK_ROOKS):
+        #     check_board |= self.ROOK_MOVE_MASKS[rook_square]
+        # # ******************** Queens ********************
+        # for queen_square in BitBoardChess.generate_positions_from_mask(self.BLACK_QUEENS):
+        #     check_board |= self.QUEEN_MOVE_MASKS[queen_square]
+        # # ******************** Kings ********************
+        # for king_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KINGS):
+        #     check_board |= self.KING_MOVE_MASKS[king_square]
+        # log.debug('Check test END.')
+        _, check_board = self.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
+        # log.debug('Check test END.')
 
-        # BitBoardChess.print_bitboard(check_board)
+        BitBoardChess.print_bitboard(check_board)
         if self.WHITE_KINGS & check_board:
             return True
         return False
@@ -370,7 +383,7 @@ class BitBoardChess:
     def reverse_bits(bitboard: int) -> int:
         bits_string = f"{bitboard:064b}"
         reversed_bits_string = ''.join(bits_string[::-1])
-        log.debug(f'{bits_string} -> {reversed_bits_string}')
+        # log.debug(f'{bits_string} -> {reversed_bits_string}')
         reversed_number = int(reversed_bits_string, base=2)
         return reversed_number
 
@@ -785,6 +798,7 @@ class BitBoardChess:
 
     def generate_all_possible_moves(self, piece_color: int) -> list:
         all_possible_moves = []
+        all_possible_moves_mask = 0
         # ******************** Pawns ********************
         # Pawn movement
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
@@ -792,18 +806,21 @@ class BitBoardChess:
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    # Pawn movement is not a capture -- all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
         # Pawn captures - LEFT
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_capture_left(pawn_square, piece_color=piece_color)
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
         # Pawn captures - RIGHT
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_capture_right(pawn_square, piece_color=piece_color)
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
         # Pawn captures - En Passant
         if self.EN_PASSANT:
             for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
@@ -811,6 +828,7 @@ class BitBoardChess:
                 if destinations:
                     for destination in BitBoardChess.generate_positions_from_mask(destinations):
                         all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)} EN PASSANT BITCHES!!!')
+                        all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
         # Promotion
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_promotion(pawn_square, piece_color=piece_color)
@@ -820,6 +838,7 @@ class BitBoardChess:
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}->R')
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}->B')
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}->N')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** Knights ********************
         for knight_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KNIGHTS if piece_color == BitBoardChess.WHITE else self.BLACK_KNIGHTS):
@@ -827,6 +846,7 @@ class BitBoardChess:
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(knight_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** Bishops ********************
         for bishop_square in BitBoardChess.generate_positions_from_mask(self.WHITE_BISHOPS if piece_color == BitBoardChess.WHITE else self.BLACK_BISHOPS):
@@ -834,6 +854,7 @@ class BitBoardChess:
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(bishop_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** Rooks ********************
         for rook_square in BitBoardChess.generate_positions_from_mask(self.WHITE_ROOKS if piece_color == BitBoardChess.WHITE else self.BLACK_ROOKS):
@@ -841,6 +862,7 @@ class BitBoardChess:
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** Queens ********************
         for queen_square in BitBoardChess.generate_positions_from_mask(self.WHITE_QUEENS if piece_color == BitBoardChess.WHITE else self.BLACK_QUEENS):
@@ -848,6 +870,7 @@ class BitBoardChess:
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(queen_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** King ********************
         for king_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KINGS if piece_color == BitBoardChess.WHITE else self.BLACK_KINGS):
@@ -855,6 +878,7 @@ class BitBoardChess:
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(king_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** Castling ********************
         # castling_options = self.process_castling_moves(piece_color=piece_color)
@@ -862,7 +886,7 @@ class BitBoardChess:
         #     all_possible_moves.append(f'{castling_option}')
 
         log.info(f"""{len(all_possible_moves)} moves generated for {"WHITE" if piece_color == BitBoardChess.WHITE else "BLACK"}: {all_possible_moves}""")
-        return all_possible_moves
+        return all_possible_moves, all_possible_moves_mask
 
     def apply_move(self, move: str) -> None:
         """
@@ -940,7 +964,9 @@ if __name__ == '__main__':
     chess_board.apply_move('e1d3')
     chess_board.print_board()
     print(chess_board.LAZY_CHECK_WHITE_KING)
-    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
+    chess_board.apply_move('d8d5')
+    chess_board.print_board()
+    print(chess_board.LAZY_CHECK_WHITE_KING)
     # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
     # chess_board.apply_move('e2e4')
     # chess_board.print_board()
@@ -976,8 +1002,9 @@ if __name__ == '__main__':
     # chess_board.print_board()
     # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
     # # https://www.chessprogramming.org/Encoding_Moves
-    # chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
-    # chess_board.print_board()
+    chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
+    chess_board.print_board()
+    print(chess_board.PLAYER_TURN)
     # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
     # chess_board.load_from_fen_string(fen_string="R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1")
     # chess_board.print_board()
