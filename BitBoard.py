@@ -1,4 +1,5 @@
 """
+NEED TO TEST THE URDL AND ULDR MASKS TO EXCLUDE CURRENT SQUARE!!!
 To do - handle pawn promotion
 NEED TO MAKE SURE EN PASSANT IS HANDLED CORRECTLY - LOOK AT REAL FEN STRINGS LIKE THIS -- rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 -- after 1 e4
 Evalute function
@@ -8,6 +9,17 @@ Search function
 from bcolors import bcolors
 from math import log2
 import logging
+import configparser
+config = configparser.ConfigParser()
+config.read('config.ini')
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    handlers=[
+                        # logging.FileHandler(filename='log.txt'),
+                        logging.StreamHandler(),
+                        # MariaDBHandler(username=config['log']['log_db_user'], password=config['log']['log_db_password'], host=config['log']['log_db_host'])
+                    ])
 log = logging.getLogger(__name__)
 
 
@@ -45,13 +57,13 @@ class BitBoardChess:
     BLACK_PIECE_ATTRIBUTES = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS']
     WHITE_PIECE_ATTRIBUTES = ['WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS']
 
-    PUSH_ITEMS = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS',
+    SAVE_ORDER = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS',
                   'WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS',
                   'EN_PASSANT', 'CASTLING', 'FULL_MOVES', 'HALF_MOVES']
 
-    POP_ITEMS = ['HALF_MOVES', 'FULL_MOVES', 'CASTLING', 'EN_PASSANT',
-                 'WHITE_KINGS', 'WHITE_QUEENS', 'WHITE_ROOKS', 'WHITE_BISHOPS', 'WHITE_KNIGHTS', 'WHITE_PAWNS',
-                 'BLACK_KINGS', 'BLACK_QUEENS', 'BLACK_ROOKS', 'BLACK_BISHOPS', 'BLACK_KNIGHTS', 'BLACK_PAWNS']
+    # POP_ITEMS = ['HALF_MOVES', 'FULL_MOVES', 'CASTLING', 'EN_PASSANT',
+    #              'WHITE_KINGS', 'WHITE_QUEENS', 'WHITE_ROOKS', 'WHITE_BISHOPS', 'WHITE_KNIGHTS', 'WHITE_PAWNS',
+    #              'BLACK_KINGS', 'BLACK_QUEENS', 'BLACK_ROOKS', 'BLACK_BISHOPS', 'BLACK_KNIGHTS', 'BLACK_PAWNS']
 
     def __init__(self) -> None:
         self.RANK_MASKS = [0] * 8
@@ -63,8 +75,17 @@ class BitBoardChess:
         self.FULL_MOVES = 0
         self.HALF_MOVES = 0
         self.GAME_STACK = []
+
+        self.KNIGHT_MOVE_MASKS = [0] * 64
+        self.BISHOP_MOVE_MASKS = [0] * 64
+        self.ROOK_MOVE_MASKS = [0] * 64
+        self.QUEEN_MOVE_MASKS = [0] * 64
+        self.KING_MOVE_MASKS = [0] * 64
+
+        self.clear()
         self.setup_horizontal_and_vertical_masks()
         self.setup_uldr_diagonal_and_urdl_diagonal_masks()
+        self.setup_piece_masks()
         self.reset()
 
     def reset(self) -> None:
@@ -245,7 +266,7 @@ class BitBoardChess:
 
         if self.BLACK_PIECES & position_mask:
             piece_label += bcolors.ENDC
-        return piece_label
+        return piece_label    
 
     def setup_horizontal_and_vertical_masks(self) -> None:
         log.debug('Generating horizontal and vertical masks...')
@@ -257,11 +278,11 @@ class BitBoardChess:
         for file in range(8):
             self.FILE_MASKS[file] = (file_base_mask >> file) & BitBoardChess.SIXTY_FOUR_BIT_MASK
 
-        # for square in range(64):
-        #     rank = 7 - (square // 8)
-        #     file = square % 8
-        #     mask_value = (self.RANK_MASKS[rank] | self.FILE_MASKS[file]) & ~(1 << (63 - square))
-        #     self.HV_MASKS[square] = mask_value
+        for square in range(64):
+            rank = 7 - (square // 8)
+            file = square % 8
+            mask_value = (self.RANK_MASKS[rank] | self.FILE_MASKS[file]) & ~(1 << (63 - square))
+            self.HV_MASKS[square] = mask_value
         log.debug('Generating horizontal and vertical masks... Done.')
 
     def setup_uldr_diagonal_and_urdl_diagonal_masks(self) -> None:
@@ -302,6 +323,48 @@ class BitBoardChess:
     @property
     def EMPTY_SQUARES(self) -> int:
         return ~self.ALL_PIECES
+
+    @property
+    def LAZY_CHECK_WHITE_KING(self) -> bool:
+        """
+        Determines if any BLACK piece is threatening the WHITE King, without looking at any pieces which may be in the way.
+        """
+        check_board = 0
+        # ******************** Pawns ********************
+        check_board |= (self.BLACK_PAWNS >> 7) & ~BitBoardChess.FILE_H
+        check_board |= (self.BLACK_PAWNS >> 9) & ~BitBoardChess.FILE_A
+        # ******************** Knights ********************
+        for knight_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KNIGHTS):
+            check_board |= self.KNIGHT_MOVE_MASKS[knight_square]
+        # ******************** Bishops ********************
+        for bishop_square in BitBoardChess.generate_positions_from_mask(self.BLACK_BISHOPS):
+            check_board |= self.BISHOP_MOVE_MASKS[bishop_square]
+        # ******************** Rooks ********************
+        for rook_square in BitBoardChess.generate_positions_from_mask(self.BLACK_ROOKS):
+            check_board |= self.ROOK_MOVE_MASKS[rook_square]
+        # ******************** Queens ********************
+        for queen_square in BitBoardChess.generate_positions_from_mask(self.BLACK_QUEENS):
+            check_board |= self.QUEEN_MOVE_MASKS[queen_square]
+        # ******************** Kings ********************
+        for king_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KINGS):
+            check_board |= self.KING_MOVE_MASKS[king_square]
+
+        # BitBoardChess.print_bitboard(check_board)
+        if self.WHITE_KINGS & check_board:
+            return True
+        return False
+
+    def setup_piece_masks(self) -> None:
+        log.debug('Generating piece masks...')
+        for square in range(64):
+            self.KNIGHT_MOVE_MASKS[square] = self.process_knight_move(board_position=square, piece_color=None)
+            self.BISHOP_MOVE_MASKS[square] = (self.URDL_DIAGONAL_MASKS[square] | self.ULDR_DIAGONAL_MASKS[square]) & ~(1 << (63 - square))
+            self.ROOK_MOVE_MASKS[square] = self.HV_MASKS[square]
+            self.QUEEN_MOVE_MASKS[square] = (self.URDL_DIAGONAL_MASKS[square] | self.ULDR_DIAGONAL_MASKS[square] | self.HV_MASKS[square]) & ~(1 << (63 - square))
+            self.KING_MOVE_MASKS[square] = self.process_king_move(board_position=square, piece_color=None)
+            # print(square)
+            # BitBoardChess.print_bitboard(self.KING_MOVE_MASKS[square])
+        log.debug('Generating piece masks... Done.')
 
     @staticmethod
     def reverse_bits(bitboard: int) -> int:
@@ -535,7 +598,7 @@ class BitBoardChess:
         # King can go to where an opponent's piece is located, but not one of its own pieces
         if piece_color == BitBoardChess.WHITE:
             move_mask = move_mask & (~self.WHITE_PIECES)
-        else:
+        elif piece_color == BitBoardChess.BLACK:
             move_mask = move_mask & (~self.BLACK_PIECES)
 
         # BitBoardChess.print_bitboard(move_mask)
@@ -679,7 +742,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
-    def process_knight_move(self, board_position: int, piece_color: int) -> None:
+    def process_knight_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the knight piece.
         Utilizes KNIGHT_SPAN to determine which squares are in reach, and the
@@ -701,7 +764,7 @@ class BitBoardChess:
         # Knight can go to where an opponent's piece is located, but not one of its own pieces
         if piece_color == BitBoardChess.WHITE:
             move_mask = move_mask & (~self.WHITE_PIECES)
-        else:
+        elif piece_color == BitBoardChess.BLACK:
             move_mask = move_mask & (~self.BLACK_PIECES)
 
         return move_mask
@@ -858,7 +921,7 @@ class BitBoardChess:
 
     def save_state(self) -> None:
         # board_state = tuple(self.__getattribute__(attribute) for attribute in BitBoardChess.PUSH_ITEMS)
-        board_state = {attribute: self.__getattribute__(attribute) for attribute in BitBoardChess.PUSH_ITEMS}
+        board_state = {attribute: self.__getattribute__(attribute) for attribute in BitBoardChess.SAVE_ORDER}
         self.GAME_STACK.append(board_state)      
 
     def load_state(self) -> None:
@@ -873,22 +936,28 @@ class BitBoardChess:
 if __name__ == '__main__':
     chess_board = BitBoardChess()
     chess_board.print_board()
-    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
-    chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
-    chess_board.apply_move('e2e4')
+    print(chess_board.LAZY_CHECK_WHITE_KING)
+    chess_board.apply_move('e1d3')
     chess_board.print_board()
-    BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
-    chess_board.clear()
-    chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00001000_00000000
-    chess_board.BLACK_PAWNS = 0b00000000_10010000_00000000_00000000_00000000_00000000_00000000_00000000
-    chess_board.print_board()
-    chess_board.apply_move('e2e4')
-    chess_board.apply_move('a7a6')
-    chess_board.apply_move('e4e5')
-    chess_board.apply_move('d7d5')
-    chess_board.print_board()
+    print(chess_board.LAZY_CHECK_WHITE_KING)
+    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)
+    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
+    # chess_board.apply_move('e2e4')
+    # chess_board.print_board()
     # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
-    print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
+    # chess_board.clear()
+    # chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00001000_00000000
+    # chess_board.BLACK_PAWNS = 0b00000000_10010000_00000000_00000000_00000000_00000000_00000000_00000000
+    # chess_board.print_board()
+    # chess_board.apply_move('e2e4')
+    # chess_board.apply_move('a7a6')
+    # chess_board.apply_move('e4e5')
+    # chess_board.apply_move('d7d5')
+    # chess_board.print_board()
+    # # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
+    # print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
+
+
     # chess_board.save_state()
     # print(chess_board.GAME_STACK)
     # chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_11110000_00111100_00001111
