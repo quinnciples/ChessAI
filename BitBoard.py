@@ -1087,7 +1087,7 @@ if __name__ == '__main__':
                                         chess_board.save_state()
                                         chess_board.apply_move(move5)
                                         if not chess_board.player_is_in_check(BitBoardChess.WHITE):
-                                            for move6 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+                                            for move6 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
                                                 chess_board.save_state()
                                                 chess_board.apply_move(move6)
                                                 if not chess_board.player_is_in_check(BitBoardChess.BLACK):
