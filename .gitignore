@@ -141,3 +141,4 @@ log.txt
 config.ini
 moves_database.db
 moves_database.db-journal
+move_cache.json
