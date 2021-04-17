@@ -1047,11 +1047,29 @@ class BitBoardChess:
             self.PLAYER_TURN = BitBoardChess.WHITE if self.PLAYER_TURN == BitBoardChess.BLACK else BitBoardChess.BLACK
             evaluation = self.depth_search(depth=depth - 1)
             self.load_state()
-            if evaluation > best_score:
-                best_score = evaluation
-                best_move = move
+            best_score = max(evaluation, best_score)
 
         return best_score
+
+    def shannon_number(self, depth: int, player_turn: int) -> int:
+        """
+        """
+        if depth == 0:
+            return 1
+
+        shannon = 0
+        all_possible_moves = [move for move in self.generate_all_possible_moves(piece_color=player_turn)[0]]
+        next_player = BitBoardChess.WHITE if player_turn == BitBoardChess.BLACK else BitBoardChess.BLACK
+        for move in all_possible_moves:
+            self.save_state()
+            self.apply_move(move)
+            if not self.player_is_in_check(player_turn):
+                shannon += self.shannon_number(depth=depth - 1, player_turn=next_player)
+            self.load_state()
+
+        return shannon
+
+
 
 
 if __name__ == '__main__':
@@ -1061,46 +1079,49 @@ if __name__ == '__main__':
     cache_file = open("move_cache.json", "rb")
     chess_board.MOVE_CACHE = pickle.load(cache_file)
     cache_file.close()
+    print('Loading cache... Done.')
     # chess_board.test()
     chess_board.print_board()
-
-    print('Turn 3 - Black')
     start_time = datetime.now()
-    total_moves = []
-    for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
-        chess_board.save_state()
-        chess_board.apply_move(move)
-        if not chess_board.player_is_in_check(BitBoardChess.WHITE):
-            for move2 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
-                chess_board.save_state()
-                chess_board.apply_move(move2)
-                if not chess_board.player_is_in_check(BitBoardChess.BLACK):
-                    for move3 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
-                        chess_board.save_state()
-                        chess_board.apply_move(move3)
-                        if not chess_board.player_is_in_check(BitBoardChess.WHITE):
-                            for move4 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
-                                chess_board.save_state()
-                                chess_board.apply_move(move4)
-                                if not chess_board.player_is_in_check(BitBoardChess.BLACK):
-                                    for move5 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
-                                        chess_board.save_state()
-                                        chess_board.apply_move(move5)
-                                        if not chess_board.player_is_in_check(BitBoardChess.WHITE):
-                                            for move6 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
-                                                chess_board.save_state()
-                                                chess_board.apply_move(move6)
-                                                if not chess_board.player_is_in_check(BitBoardChess.BLACK):
-                                                    total_moves.append([move, move2, move3, move4, move5, move6])
-                                                chess_board.load_state()
-                                        chess_board.load_state()
-                                chess_board.load_state()
-                        chess_board.load_state()
-                chess_board.load_state()
-        chess_board.load_state()
-    print(f"{len(total_moves):0,}")
+    print(chess_board.shannon_number(depth=6, player_turn=BitBoardChess.WHITE))
     print(datetime.now() - start_time)
-    print(f'Cache size: {len(chess_board.MOVE_CACHE):0,}')
+    # print('Turn 3 - Black')
+    # start_time = datetime.now()
+    # total_moves = []
+    # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+    #     chess_board.save_state()
+    #     chess_board.apply_move(move)
+    #     if not chess_board.player_is_in_check(BitBoardChess.WHITE):
+    #         for move2 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
+    #             chess_board.save_state()
+    #             chess_board.apply_move(move2)
+    #             if not chess_board.player_is_in_check(BitBoardChess.BLACK):
+    #                 for move3 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+    #                     chess_board.save_state()
+    #                     chess_board.apply_move(move3)
+    #                     if not chess_board.player_is_in_check(BitBoardChess.WHITE):
+    #                         for move4 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
+    #                             chess_board.save_state()
+    #                             chess_board.apply_move(move4)
+    #                             if not chess_board.player_is_in_check(BitBoardChess.BLACK):
+    #                                 for move5 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
+    #                                     chess_board.save_state()
+    #                                     chess_board.apply_move(move5)
+    #                                     if not chess_board.player_is_in_check(BitBoardChess.WHITE):
+    #                                         for move6 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
+    #                                             chess_board.save_state()
+    #                                             chess_board.apply_move(move6)
+    #                                             if not chess_board.player_is_in_check(BitBoardChess.BLACK):
+    #                                                 total_moves.append([move, move2, move3, move4, move5, move6])
+    #                                             chess_board.load_state()
+    #                                     chess_board.load_state()
+    #                             chess_board.load_state()
+    #                     chess_board.load_state()
+    #             chess_board.load_state()
+    #     chess_board.load_state()
+    # print(f"{len(total_moves):0,}")
+    # print(datetime.now() - start_time)
+    # print(f'Cache size: {len(chess_board.MOVE_CACHE):0,}')
     
     cache_file = open('move_cache.json', 'wb')
     pickle.dump(chess_board.MOVE_CACHE, cache_file)
