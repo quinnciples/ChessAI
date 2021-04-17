@@ -1,4 +1,6 @@
 """
+DOUBLE-CHECK MOVEMENT MASK DEALY WITH OFFSET BIT FOR CURRENT POSITION!!!
+DO NEW CHECK BENCHMARK
 NEED TO TEST THE URDL AND ULDR MASKS TO EXCLUDE CURRENT SQUARE!!!
 To do - handle pawn promotion
 NEED TO MAKE SURE EN PASSANT IS HANDLED CORRECTLY - LOOK AT REAL FEN STRINGS LIKE THIS -- rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 -- after 1 e4
@@ -22,6 +24,8 @@ logging.basicConfig(level=logging.CRITICAL,
                         # MariaDBHandler(username=config['log']['log_db_user'], password=config['log']['log_db_password'], host=config['log']['log_db_host'])
                     ])
 log = logging.getLogger(__name__)
+
+all_move_history = {}
 
 
 class BitBoardChess:
@@ -84,6 +88,8 @@ class BitBoardChess:
         self.QUEEN_MOVE_MASKS = [0] * 64
         self.KING_MOVE_MASKS = [0] * 64
 
+        self.move_history = []
+
         self.clear()
         self.setup_horizontal_and_vertical_masks()
         self.setup_uldr_diagonal_and_urdl_diagonal_masks()
@@ -106,6 +112,8 @@ class BitBoardChess:
         self.BLACK_BISHOPS = 0b00100100_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_KINGS =   0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+
+        self.move_history.clear()
 
     def reset(self) -> None:
         self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000
@@ -130,6 +138,7 @@ class BitBoardChess:
         self.HALF_MOVES = 0
 
         self.GAME_STACK.clear()
+        self.move_history.clear()
 
         self.PLAYER_TURN = BitBoardChess.WHITE
 
@@ -156,6 +165,7 @@ class BitBoardChess:
         self.HALF_MOVES = 0
 
         self.GAME_STACK.clear()
+        self.move_history.clear()
 
         self.PLAYER_TURN = BitBoardChess.WHITE
 
@@ -476,7 +486,7 @@ class BitBoardChess:
     @staticmethod
     def convert_algebraic_notation_to_position(algebraic_notation: str) -> int:
         """
-        Converts a two-character algebraic notation (b2, etc) to the board position index.
+        Converts a two-character algebraic notation (b2, c4, etc) to the board position index.
         """
         algebraic_notation = algebraic_notation.lower()
         file = ord(algebraic_notation[0]) - 97
@@ -944,7 +954,7 @@ class BitBoardChess:
         # for castling_option in castling_options:
         #     all_possible_moves.append(f'{castling_option}')
 
-        log.info(f"""{len(all_possible_moves)} moves generated for {"WHITE" if piece_color == BitBoardChess.WHITE else "BLACK"}: {all_possible_moves}""")
+        # log.info(f"""{len(all_possible_moves)} moves generated for {"WHITE" if piece_color == BitBoardChess.WHITE else "BLACK"}: {all_possible_moves}""")
         self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)] = (all_possible_moves, all_possible_moves_mask)
         return all_possible_moves, all_possible_moves_mask
 
@@ -1001,6 +1011,8 @@ class BitBoardChess:
         else:
             raise Exception('Move not found on board.')
 
+        # self.move_history.append(move)
+
         return
 
     def save_state(self) -> None:
@@ -1051,40 +1063,98 @@ class BitBoardChess:
 
         return best_score
 
-    def shannon_number(self, depth: int, player_turn: int) -> int:
+    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, move_history: list = []) -> int:
         """
         """
-        if depth == 0:
+        if depth_limit == current_depth:
+            # all_move_history.append([m for m in move_history])
+            # print(move_history)
             return 1
 
         shannon = 0
         all_possible_moves = [move for move in self.generate_all_possible_moves(piece_color=player_turn)[0]]
+        if current_depth == 0:
+            progress_number_of_moves = len(all_possible_moves)
+            start_time = datetime.now()
+
         next_player = BitBoardChess.WHITE if player_turn == BitBoardChess.BLACK else BitBoardChess.BLACK
-        for move in all_possible_moves:
+        for idx, move in enumerate(all_possible_moves):
+            if current_depth == 0:
+                print(f'{datetime.now()} - Analyzing {move} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
             self.save_state()
             self.apply_move(move)
+            ##### move_history.append(move)
             if not self.player_is_in_check(player_turn):
-                shannon += self.shannon_number(depth=depth - 1, player_turn=next_player)
+                next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, move_history=move_history)
+                shannon += next_depth_shannon_number
+                if current_depth == 0:
+                    all_move_history[move] = next_depth_shannon_number
+            ##### move_history.pop()
             self.load_state()
+            if current_depth == 0:
+                print(f'{next_depth_shannon_number}   //   Approximately {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
 
         return shannon
 
 
+def shannon_test():
+    # stockfish
+    # position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+    # d
+    # go perft x
+    chess_board = BitBoardChess()
+    shannon_depth = 5
+    all_move_history.clear()
+    # header_row = ['move' + str(m + 1) for m in range(shannon_depth)]
+    # header_row = ['first move', f'number of moves at depth {shannon_depth}']
+    # all_move_history.append(header_row)
+    print('Loading cache...')
+    import pickle
+    with open("move_cache.json", "rb") as cache_file:
+        chess_board.MOVE_CACHE = pickle.load(cache_file)
+    cache_file.close()
+    print('Loading cache... Done.')
+    chess_board.print_board()
+    start_time = datetime.now()
+    # chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE)
+    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE):0,} took {datetime.now() - start_time}.')
+    for key, value in sorted(all_move_history.items(), key=lambda x: x[0]):
+        print("{} : {}".format(key, value))
+    
+    # print('Writing moves to csv...')
+    # import csv
+    # with open('all_bitboard_moves.csv', 'w', newline='') as f:
+    #     writer = csv.writer(f)
+    #     writer.writerows(all_move_history)
+    # print('Writing moves to csv... Done.')
+
 
 
 if __name__ == '__main__':
-    chess_board = BitBoardChess()
-    print('Loading cache...')
-    import pickle
-    cache_file = open("move_cache.json", "rb")
-    chess_board.MOVE_CACHE = pickle.load(cache_file)
-    cache_file.close()
-    print('Loading cache... Done.')
+    shannon_test()
+    # chess_board = BitBoardChess()
+    # all_move_history.clear()
+    # print('Loading cache...')
+    # import pickle
+    # cache_file = open("move_cache.json", "rb")
+    # chess_board.MOVE_CACHE = pickle.load(cache_file)
+    # cache_file.close()
+    # print('Loading cache... Done.')
     # chess_board.test()
-    chess_board.print_board()
-    start_time = datetime.now()
-    print(chess_board.shannon_number(depth=6, player_turn=BitBoardChess.WHITE))
-    print(datetime.now() - start_time)
+    # chess_board.print_board()
+    # start_time = datetime.now()
+    # chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE)
+    # print(f'{chess_board.shannon_number(depth_limit=2, player_turn=BitBoardChess.WHITE):0,} took {datetime.now() - start_time}.')
+    # for s in range(2):
+    #     start_time = datetime.now()
+    #     print(f'{s+1} - {chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE):0,} took {datetime.now() - start_time}.')
+    
+
+
+
+
+    # 6 119,060,538
+    # print(datetime.now() - start_time)
     # print('Turn 3 - Black')
     # start_time = datetime.now()
     # total_moves = []
@@ -1123,9 +1193,9 @@ if __name__ == '__main__':
     # print(datetime.now() - start_time)
     # print(f'Cache size: {len(chess_board.MOVE_CACHE):0,}')
     
-    cache_file = open('move_cache.json', 'wb')
-    pickle.dump(chess_board.MOVE_CACHE, cache_file)
-    cache_file.close()
+    # cache_file = open('move_cache.json', 'wb')
+    # pickle.dump(chess_board.MOVE_CACHE, cache_file)
+    # cache_file.close()
 
 
     # import csv

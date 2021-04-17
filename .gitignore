@@ -142,3 +142,7 @@ config.ini
 moves_database.db
 moves_database.db-journal
 move_cache.json
+all_bitboard_moves.csv
+stockfish_13_win_x64_bmi2.exe
+stockfish_13_win_x64.exe
+game_analyzer_v39.11.beta.py
