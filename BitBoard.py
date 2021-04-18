@@ -125,6 +125,7 @@ class BitBoardChess:
         self.HALF_MOVES = 0
         self.GAME_STACK = []
         self.PLAYER_TURN = BitBoardChess.WHITE
+        self.EN_PASSANT = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
         self.KNIGHT_MOVE_MASKS = [0] * 64
         self.BISHOP_MOVE_MASKS = [0] * 64
@@ -158,6 +159,7 @@ class BitBoardChess:
         self.BLACK_KINGS =   0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
         self.move_history.clear()
+        self.GAME_STACK.clear()
 
     def reset(self) -> None:
         self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000
@@ -294,6 +296,7 @@ class BitBoardChess:
             if len(en_passant) == 2:
                 en_passant_board_position = BitBoardChess.convert_algebraic_notation_to_position(en_passant)
                 self.EN_PASSANT = BitBoardChess.convert_position_to_mask(en_passant_board_position)
+                log.info(f'En Passant loaded: {en_passant_board_position}.')
 
         self.clear()
         process_board_layout(board_string=board_string)
@@ -1010,7 +1013,7 @@ class BitBoardChess:
         end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
         start_mask = BitBoardChess.convert_position_to_mask(start_square)
         end_mask = BitBoardChess.convert_position_to_mask(end_square)
-        self.EN_PASSANT = 0
+        EN_PASSANT_FLAG = False
 
         if self.WHITE_PIECES & start_mask:
             piece_color = BitBoardChess.WHITE
@@ -1021,9 +1024,16 @@ class BitBoardChess:
                     self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
                     break
 
+            # Pawn moved 2 space -> En Passant move
             if self.WHITE_PAWNS & end_mask and ((end_mask >> 16) & start_mask):
                 self.EN_PASSANT = (end_mask >> 8)
                 log.debug(f'En Passant move detected: {move}.')
+                EN_PASSANT_FLAG = True
+
+            # Shift end_mask to the pawn location if this was an En Passant capture
+            if self.BLACK_PAWNS & (self.EN_PASSANT >> 8) and self.WHITE_PAWNS & self.EN_PASSANT:
+                end_mask = end_mask >> 8
+                log.debug(f'En passant capture: {move}.')
 
             # Check for captures
             if self.BLACK_PIECES & end_mask:
@@ -1044,6 +1054,12 @@ class BitBoardChess:
             if self.BLACK_PAWNS & end_mask and ((end_mask << 16) & start_mask):
                 self.EN_PASSANT = (end_mask << 8)
                 log.debug(f'En Passant move detected: {move}.')
+                EN_PASSANT_FLAG = True
+
+            # Shift end_mask to the pawn location if this was an En Passant capture
+            if self.WHITE_PAWNS & (self.EN_PASSANT << 8) and self.BLACK_PAWNS & self.EN_PASSANT:
+                end_mask = end_mask << 8
+                log.debug(f'En passant capture: {move}.')
 
             # Check for captures
             if self.WHITE_PIECES & end_mask:
@@ -1055,7 +1071,8 @@ class BitBoardChess:
         else:
             raise Exception('Move not found on board.')
 
-        # self.move_history.append(move)
+        if EN_PASSANT_FLAG is False:
+            self.EN_PASSANT = 0
 
         return
 
@@ -1107,7 +1124,7 @@ class BitBoardChess:
 
         return best_score
 
-    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, move_history: list = [], fen_string_to_test = '') -> int:
+    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, move_history: list = [], fen_string_to_test: str = '') -> int:
         """
         """
         if depth_limit == current_depth:
@@ -1125,21 +1142,25 @@ class BitBoardChess:
         for idx, move in enumerate(all_possible_moves):
             if current_depth == 0:
                 print(f'{datetime.now()} - Analyzing {move} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
+
             self.save_state()
             self.apply_move(move)
+
             move_history.append(move)
             if not self.player_is_in_check(player_turn):
                 next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, move_history=move_history)
                 shannon += next_depth_shannon_number
                 if current_depth == 0:
                     all_move_history[move] = next_depth_shannon_number
+
             move_history.pop()
             self.load_state()
             if current_depth == 0:
                 print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
                 if correct_results.get(move, -1) != next_depth_shannon_number:
-                    # break
-                    pass
+                    print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
+                    break
+                    # pass
 
         if current_depth == 0:
             match = True
@@ -1156,7 +1177,7 @@ class BitBoardChess:
                 print('******** ' + bcolors.CGREEN + ' LOOKS GOOD ' + bcolors.ENDC + '*************')
             else:
                 print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
-            
+
             # print()
             # print('************** MY MOVES ********************')
             # print()
@@ -1176,6 +1197,7 @@ def shannon_test():
     chess_board = BitBoardChess()
     fen_string = "rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3"
     chess_board.load_from_fen_string(fen_string=fen_string)
+    chess_board.EN_PASSANT = 1 << (63 - 22)
     shannon_depth = 2
     all_move_history.clear()
     # header_row = ['move' + str(m + 1) for m in range(shannon_depth)]
@@ -1192,7 +1214,7 @@ def shannon_test():
     chess_board.print_board()
     start_time = datetime.now()
     # chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE)
-    
+
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
     print()
     print('************* MY RESULTS *****************')
@@ -1210,10 +1232,19 @@ def shannon_test():
 
 def shannon_test2():
     chess_board = BitBoardChess()
+
+    print('Loading cache...')
+    import pickle
+    with open("move_cache.json", "rb") as cache_file:
+        chess_board.MOVE_CACHE = pickle.load(cache_file)
+    cache_file.close()
+    print('Loading cache... Done.')
+
     # fen_string = "4k3/6pp/8/7P/8/8/7P/4K3 b - - 0 3"
-    fen_string = "rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3"
+    # fen_string = "rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3"
+    fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     chess_board.load_from_fen_string(fen_string=fen_string)
-    shannon_depth = 2
+    shannon_depth = 6
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
@@ -1221,6 +1252,11 @@ def shannon_test2():
     print('************* MY RESULTS *****************')
     for key, value in sorted(all_move_history.items(), key=lambda x: x[0]):
         print("{} : {}".format(key, value))
+
+    print(f'Writing {len(chess_board.MOVE_CACHE):0,} move cache... .')
+    with open("move_cache.json", "wb") as cache_file:
+        pickle.dump(chess_board.MOVE_CACHE, cache_file)
+    print('Writing cache... Done.')
 
 
 def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
