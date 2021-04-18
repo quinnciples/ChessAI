@@ -26,6 +26,50 @@ logging.basicConfig(level=logging.CRITICAL,
 log = logging.getLogger(__name__)
 
 all_move_history = {}
+# correct_results = {
+#     'a2a3': 4463267,
+#     'b2b3': 5310358,
+#     'c2c3': 5417640,
+#     'd2d3': 8073082,
+#     'e2e3': 9726018,
+#     'f2f3': 4404141,
+#     'g2g3': 5346260,
+#     'h2h3': 4463070,
+#     'a2a4': 5363555,
+#     'b2b4': 5293555,
+#     'c2c4': 5866666,
+#     'd2d4': 8879566,
+#     'e2e4': 9771632,
+#     'f2f4': 4890429,
+#     'g2g4': 5239875,
+#     'h2h4': 5385554,
+#     'b1a3': 4856835,
+#     'b1c3': 5708064,
+#     'g1f3': 5723523,
+#     'g1h3': 4877234
+# }
+correct_results = {
+    'a7a6': 199924,
+    'b7b6': 237821,
+    'c7c6': 246391,
+    'd7d6': 364147,
+    'e7e6': 447593,
+    'f7f6': 197590,
+    'g7g6': 241532,
+    'h7h6': 199505,
+    'a7a5': 240681,
+    'b7b5': 238760,
+    'c7c5': 265331,
+    'd7d5': 400921,
+    'e7e5': 450107,
+    'f7f5': 219144,
+    'g7g5': 272671,
+    'h7h5': 206279,
+    'b8a6': 219372,
+    'b8c6': 259320,
+    'g8f6': 257656,
+    'g8h6': 220809
+}
 
 
 class BitBoardChess:
@@ -1063,11 +1107,10 @@ class BitBoardChess:
 
         return best_score
 
-    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, move_history: list = []) -> int:
+    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, move_history: list = [], fen_string_to_test = '') -> int:
         """
         """
         if depth_limit == current_depth:
-            # all_move_history.append([m for m in move_history])
             # print(move_history)
             return 1
 
@@ -1075,6 +1118,7 @@ class BitBoardChess:
         all_possible_moves = [move for move in self.generate_all_possible_moves(piece_color=player_turn)[0]]
         if current_depth == 0:
             progress_number_of_moves = len(all_possible_moves)
+            correct_results = get_stockfish_data(fen_string=fen_string_to_test, shannon_depth=depth_limit)
             start_time = datetime.now()
 
         next_player = BitBoardChess.WHITE if player_turn == BitBoardChess.BLACK else BitBoardChess.BLACK
@@ -1083,55 +1127,147 @@ class BitBoardChess:
                 print(f'{datetime.now()} - Analyzing {move} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
             self.save_state()
             self.apply_move(move)
-            ##### move_history.append(move)
+            move_history.append(move)
             if not self.player_is_in_check(player_turn):
                 next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, move_history=move_history)
                 shannon += next_depth_shannon_number
                 if current_depth == 0:
                     all_move_history[move] = next_depth_shannon_number
-            ##### move_history.pop()
+            move_history.pop()
             self.load_state()
             if current_depth == 0:
-                print(f'{next_depth_shannon_number}   //   Approximately {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
+                print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
+                if correct_results.get(move, -1) != next_depth_shannon_number:
+                    # break
+                    pass
 
+        if current_depth == 0:
+            match = True
+            # If we get this far, make sure the dictionaries match
+            for k, v in correct_results.items():
+                if all_move_history.get(k, -1) != v:
+                    print(f'MY RESULTS FOR {k} {all_move_history.get(k, -1)}   STOCKFISH RESULTS FOR {k} {v}')
+                    match = False
+            for k, v in all_move_history.items():
+                if correct_results.get(k, -1) != v:
+                    print(f'MY RESULTS FOR {k} {v}   STOCKFISH RESULTS FOR {k} {correct_results.get(k, -1)}')
+                    match = False
+            if match:
+                print('******** ' + bcolors.CGREEN + ' LOOKS GOOD ' + bcolors.ENDC + '*************')
+            else:
+                print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
+            
+            # print()
+            # print('************** MY MOVES ********************')
+            # print()
+            # print(all_possible_moves)
         return shannon
 
 
 def shannon_test():
+    # LOOK AT EN PASSANT !!!!!!! NOT CAPTURING THE PAWN
     # stockfish
-    # position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+    # position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 moves move1 move2 move3...
+    # # PROBLEM H2H4->H7H6->H4H5->G7G5->H5G6 # position fen rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 3
+    # rnbqkbnr/pppppp2/6Pp/8/8/8/PPPPPPP1/RNBQKBNR b KQkq - 0 3
+    # rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3
     # d
     # go perft x
     chess_board = BitBoardChess()
-    shannon_depth = 5
+    fen_string = "rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3"
+    chess_board.load_from_fen_string(fen_string=fen_string)
+    shannon_depth = 2
     all_move_history.clear()
     # header_row = ['move' + str(m + 1) for m in range(shannon_depth)]
     # header_row = ['first move', f'number of moves at depth {shannon_depth}']
     # all_move_history.append(header_row)
-    print('Loading cache...')
-    import pickle
-    with open("move_cache.json", "rb") as cache_file:
-        chess_board.MOVE_CACHE = pickle.load(cache_file)
-    cache_file.close()
-    print('Loading cache... Done.')
+
+    # print('Loading cache...')
+    # import pickle
+    # with open("move_cache.json", "rb") as cache_file:
+    #     chess_board.MOVE_CACHE = pickle.load(cache_file)
+    # cache_file.close()
+    # print('Loading cache... Done.')
+
     chess_board.print_board()
     start_time = datetime.now()
     # chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE)
-    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE):0,} took {datetime.now() - start_time}.')
+    
+    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
+    print()
+    print('************* MY RESULTS *****************')
     for key, value in sorted(all_move_history.items(), key=lambda x: x[0]):
         print("{} : {}".format(key, value))
-    
+
     # print('Writing moves to csv...')
     # import csv
     # with open('all_bitboard_moves.csv', 'w', newline='') as f:
     #     writer = csv.writer(f)
     #     writer.writerows(all_move_history)
     # print('Writing moves to csv... Done.')
+    # print(same)
 
+
+def shannon_test2():
+    chess_board = BitBoardChess()
+    # fen_string = "4k3/6pp/8/7P/8/8/7P/4K3 b - - 0 3"
+    fen_string = "rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3"
+    chess_board.load_from_fen_string(fen_string=fen_string)
+    shannon_depth = 2
+    # all_move_history.clear()
+    start_time = datetime.now()
+    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
+    print()
+    print('************* MY RESULTS *****************')
+    for key, value in sorted(all_move_history.items(), key=lambda x: x[0]):
+        print("{} : {}".format(key, value))
+
+
+def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
+    print('Getting Stockfish data...')
+    import subprocess
+    import time
+    engine = subprocess.Popen('stockfish_13_win_x64.exe', universal_newlines=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    time.sleep(1)
+    engine.stdin.write("isready\n")
+    engine.stdin.flush()
+    print("\nengine:")
+
+    while True:
+        text = engine.stdout.readline().strip()
+        print(text)
+        if text == "readyok":
+            break
+
+    engine.stdin.write(f"position fen {fen_string}\n")
+    engine.stdin.flush()
+    time.sleep(0.25)
+    engine.stdin.write(f"go perft {shannon_depth}\n")
+    engine.stdin.flush()
+    time.sleep(0.5)
+
+    print("\nengine:")
+    results = []
+    while True:
+        text = engine.stdout.readline().strip()
+        # print(text)
+        if "Nodes searched: " in text:
+            break
+        if text != "":
+            results.append(text)
+    print(results)
+    stockfish_results = {}
+    for result in results:
+        k, v = result.split(': ')
+        stockfish_results[k] = int(v)
+    for key, value in sorted(stockfish_results.items(), key=lambda x: x[0]):
+        print("{} : {}".format(key, value))
+
+    return stockfish_results
 
 
 if __name__ == '__main__':
-    shannon_test()
+    shannon_test2()
     # chess_board = BitBoardChess()
     # all_move_history.clear()
     # print('Loading cache...')
@@ -1148,10 +1284,6 @@ if __name__ == '__main__':
     # for s in range(2):
     #     start_time = datetime.now()
     #     print(f'{s+1} - {chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE):0,} took {datetime.now() - start_time}.')
-    
-
-
-
 
     # 6 119,060,538
     # print(datetime.now() - start_time)
@@ -1192,11 +1324,9 @@ if __name__ == '__main__':
     # print(f"{len(total_moves):0,}")
     # print(datetime.now() - start_time)
     # print(f'Cache size: {len(chess_board.MOVE_CACHE):0,}')
-    
     # cache_file = open('move_cache.json', 'wb')
     # pickle.dump(chess_board.MOVE_CACHE, cache_file)
     # cache_file.close()
-
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:
