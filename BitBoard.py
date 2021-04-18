@@ -1244,7 +1244,7 @@ def shannon_test2():
     # fen_string = "rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3"
     fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     chess_board.load_from_fen_string(fen_string=fen_string)
-    shannon_depth = 6
+    shannon_depth = 4
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
@@ -1253,10 +1253,10 @@ def shannon_test2():
     for key, value in sorted(all_move_history.items(), key=lambda x: x[0]):
         print("{} : {}".format(key, value))
 
-    print(f'Writing {len(chess_board.MOVE_CACHE):0,} move cache... .')
-    with open("move_cache.json", "wb") as cache_file:
-        pickle.dump(chess_board.MOVE_CACHE, cache_file)
-    print('Writing cache... Done.')
+    # print(f'Writing {len(chess_board.MOVE_CACHE):0,} move cache... .')
+    # with open("move_cache.json", "wb") as cache_file:
+    #     pickle.dump(chess_board.MOVE_CACHE, cache_file)
+    # print('Writing cache... Done.')
 
 
 def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
@@ -1298,71 +1298,13 @@ def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
         stockfish_results[k] = int(v)
     for key, value in sorted(stockfish_results.items(), key=lambda x: x[0]):
         print("{} : {}".format(key, value))
+    engine.terminate()
 
     return stockfish_results
 
 
 if __name__ == '__main__':
     shannon_test2()
-    # chess_board = BitBoardChess()
-    # all_move_history.clear()
-    # print('Loading cache...')
-    # import pickle
-    # cache_file = open("move_cache.json", "rb")
-    # chess_board.MOVE_CACHE = pickle.load(cache_file)
-    # cache_file.close()
-    # print('Loading cache... Done.')
-    # chess_board.test()
-    # chess_board.print_board()
-    # start_time = datetime.now()
-    # chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE)
-    # print(f'{chess_board.shannon_number(depth_limit=2, player_turn=BitBoardChess.WHITE):0,} took {datetime.now() - start_time}.')
-    # for s in range(2):
-    #     start_time = datetime.now()
-    #     print(f'{s+1} - {chess_board.shannon_number(depth=s + 1, player_turn=BitBoardChess.WHITE):0,} took {datetime.now() - start_time}.')
-
-    # 6 119,060,538
-    # print(datetime.now() - start_time)
-    # print('Turn 3 - Black')
-    # start_time = datetime.now()
-    # total_moves = []
-    # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
-    #     chess_board.save_state()
-    #     chess_board.apply_move(move)
-    #     if not chess_board.player_is_in_check(BitBoardChess.WHITE):
-    #         for move2 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
-    #             chess_board.save_state()
-    #             chess_board.apply_move(move2)
-    #             if not chess_board.player_is_in_check(BitBoardChess.BLACK):
-    #                 for move3 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
-    #                     chess_board.save_state()
-    #                     chess_board.apply_move(move3)
-    #                     if not chess_board.player_is_in_check(BitBoardChess.WHITE):
-    #                         for move4 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
-    #                             chess_board.save_state()
-    #                             chess_board.apply_move(move4)
-    #                             if not chess_board.player_is_in_check(BitBoardChess.BLACK):
-    #                                 for move5 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)[0]:
-    #                                     chess_board.save_state()
-    #                                     chess_board.apply_move(move5)
-    #                                     if not chess_board.player_is_in_check(BitBoardChess.WHITE):
-    #                                         for move6 in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)[0]:
-    #                                             chess_board.save_state()
-    #                                             chess_board.apply_move(move6)
-    #                                             if not chess_board.player_is_in_check(BitBoardChess.BLACK):
-    #                                                 total_moves.append([move, move2, move3, move4, move5, move6])
-    #                                             chess_board.load_state()
-    #                                     chess_board.load_state()
-    #                             chess_board.load_state()
-    #                     chess_board.load_state()
-    #             chess_board.load_state()
-    #     chess_board.load_state()
-    # print(f"{len(total_moves):0,}")
-    # print(datetime.now() - start_time)
-    # print(f'Cache size: {len(chess_board.MOVE_CACHE):0,}')
-    # cache_file = open('move_cache.json', 'wb')
-    # pickle.dump(chess_board.MOVE_CACHE, cache_file)
-    # cache_file.close()
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:
@@ -1378,62 +1320,3 @@ if __name__ == '__main__':
     # 8 	84,998,978,956
     # 9 	2,439,530,234,167
     # 10 	69,352,859,712,417
-
-    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK)
-    # chess_board.apply_move('e2e4')
-    # chess_board.print_board()
-    # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
-    # chess_board.clear()
-    # chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00001000_00000000
-    # chess_board.BLACK_PAWNS = 0b00000000_10010000_00000000_00000000_00000000_00000000_00000000_00000000
-    # chess_board.print_board()
-    # chess_board.apply_move('e2e4')
-    # chess_board.apply_move('a7a6')
-    # chess_board.apply_move('e4e5')
-    # chess_board.apply_move('d7d5')
-    # chess_board.print_board()
-    # # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
-    # print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE))
-
-    # chess_board.save_state()
-    # print(chess_board.GAME_STACK)
-    # chess_board.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_11110000_00111100_00001111
-    # chess_board.BLACK_PAWNS = 0b11111111_10101010_01010101_00000000_00000000_00000000_00000000_00000000
-    # chess_board.print_board()
-    # chess_board.load_state()
-    # print(chess_board.GAME_STACK)
-    # chess_board.print_board()
-
-    # chess_board.apply_move('e7e5')
-    # chess_board.print_board()
-    # chess_board.apply_move('d4e5')
-    # chess_board.print_board()
-    # chess_board.clear()
-    # chess_board.load_from_fen_string("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
-    # chess_board.print_board()
-    # BitBoardChess.print_bitboard(chess_board.EN_PASSANT)
-    # # https://www.chessprogramming.org/Encoding_Moves
-    # chess_board.load_from_fen_string(fen_string="3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1")
-    # chess_board.print_board()
-    # print(chess_board.PLAYER_TURN)
-    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
-    # chess_board.load_from_fen_string(fen_string="R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1")
-    # chess_board.print_board()
-    # chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE)  # Looking for 218 here
-    # chess_board.reset()
-    # color = BitBoardChess.WHITE
-    # for turns in range(20):
-    #     moves = chess_board.generate_all_possible_moves(piece_color=color)
-    #     if moves:
-    #         move = random.choice(moves)
-    #         chess_board.apply_move(move, piece_color=color)
-    #     color = BitBoardChess.WHITE if color == BitBoardChess.BLACK else BitBoardChess.BLACK
-    # chess_board.print_board()
-    # print(turns + 1)
-
-    # chess_board.reset()
-    # for move in chess_board.generate_all_possible_moves(piece_color=BitBoardChess.WHITE):
-    #     print(move)
-    #     chess_board.apply_move(move, piece_color=BitBoardChess.WHITE)
-    #     chess_board.print_board()
-    #     chess_board.reset()
