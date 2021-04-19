@@ -66,10 +66,6 @@ class BitBoardChess:
                   'WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS',
                   'EN_PASSANT', 'CASTLING', 'FULL_MOVES', 'HALF_MOVES', 'PLAYER_TURN']
 
-    # POP_ITEMS = ['HALF_MOVES', 'FULL_MOVES', 'CASTLING', 'EN_PASSANT',
-    #              'WHITE_KINGS', 'WHITE_QUEENS', 'WHITE_ROOKS', 'WHITE_BISHOPS', 'WHITE_KNIGHTS', 'WHITE_PAWNS',
-    #              'BLACK_KINGS', 'BLACK_QUEENS', 'BLACK_ROOKS', 'BLACK_BISHOPS', 'BLACK_KNIGHTS', 'BLACK_PAWNS']
-
     def __init__(self) -> None:
         self.RANK_MASKS = [0] * 8
         self.FILE_MASKS = [0] * 8
@@ -99,40 +95,22 @@ class BitBoardChess:
 
         self.MOVE_CACHE = {}
 
-    def test(self) -> None:
-        self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.WHITE_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.WHITE_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100100
-        self.WHITE_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.WHITE_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000
-
-        self.BLACK_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_BISHOPS = 0b00100100_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_KINGS =   0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-
-        self.move_history.clear()
-        self.GAME_STACK.clear()
-
     def reset(self) -> None:
-        self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000
-        self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_10000001
+        self.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000
+        self.WHITE_ROOKS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_10000001
         self.WHITE_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000010
         self.WHITE_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100100
-        self.WHITE_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010000
-        self.WHITE_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000
+        self.WHITE_QUEENS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010000
+        self.WHITE_KINGS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000
 
-        self.BLACK_PAWNS =   0b00000000_11111111_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_ROOKS =   0b10000001_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_PAWNS = 0b00000000_11111111_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_ROOKS = 0b10000001_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_KNIGHTS = 0b01000010_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_BISHOPS = 0b00100100_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_QUEENS =  0b00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_KINGS =   0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_QUEENS = 0b00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_KINGS = 0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
-        self.EN_PASSANT =    0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.EN_PASSANT = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
         self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
 
@@ -145,31 +123,20 @@ class BitBoardChess:
         self.PLAYER_TURN = BitBoardChess.WHITE
 
     def clear(self) -> None:
-        self.WHITE_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.WHITE_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.reset()
+        self.WHITE_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_ROOKS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.WHITE_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.WHITE_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.WHITE_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.WHITE_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_QUEENS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.WHITE_KINGS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
-        self.BLACK_PAWNS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_ROOKS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_PAWNS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_ROOKS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_KNIGHTS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_BISHOPS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_QUEENS =  0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-        self.BLACK_KINGS =   0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-
-        self.EN_PASSANT =    0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-
-        self.CASTLING = {'K': 0, 'Q': 0, 'k': 0, 'q': 0}
-
-        self.FULL_MOVES = 0
-        self.HALF_MOVES = 0
-
-        self.GAME_STACK.clear()
-        self.move_history.clear()
-
-        self.PLAYER_TURN = BitBoardChess.WHITE
+        self.BLACK_QUEENS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+        self.BLACK_KINGS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
     def load_from_fen_string(self, fen_string: str) -> None:
         keys = fen_string.split(' ')
@@ -974,7 +941,7 @@ class BitBoardChess:
         EN_PASSANT_FLAG = False
 
         if self.WHITE_PIECES & start_mask:
-            piece_color = BitBoardChess.WHITE
+            # piece_color = BitBoardChess.WHITE
             for PIECE_BOARD in BitBoardChess.WHITE_PIECE_ATTRIBUTES:
                 if self.__getattribute__(PIECE_BOARD) & start_mask:
                     log.debug(f'Found WHITE piece in {PIECE_BOARD}.')
@@ -1001,7 +968,7 @@ class BitBoardChess:
                         log.debug(f'Found BLACK piece being captured in {CAPTURE_BOARD}.')
 
         elif self.BLACK_PIECES & start_mask:
-            piece_color = BitBoardChess.BLACK
+            # piece_color = BitBoardChess.BLACK
             for PIECE_BOARD in BitBoardChess.BLACK_PIECE_ATTRIBUTES:
                 if self.__getattribute__(PIECE_BOARD) & start_mask:
                     log.debug(f'Found BLACK piece in {PIECE_BOARD}.')
@@ -1009,6 +976,7 @@ class BitBoardChess:
                     self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
                     break
 
+            # Pawn moved 2 space -> En Passant move
             if self.BLACK_PAWNS & end_mask and ((end_mask << 16) & start_mask):
                 self.EN_PASSANT = (end_mask << 8)
                 log.debug(f'En Passant move detected: {move}.')
@@ -1106,7 +1074,8 @@ class BitBoardChess:
             self.apply_move(move)
 
             # move_history.append(move)
-            if not self.player_is_in_check(player_turn):
+            check_for_player = self.player_is_in_check(player_turn)
+            if not check_for_player:
                 next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, move_history=move_history)
                 shannon += next_depth_shannon_number
                 if current_depth == 0:
@@ -1114,23 +1083,25 @@ class BitBoardChess:
 
             # move_history.pop()
             self.load_state()
-            if current_depth == 0:
+            if current_depth == 0 and not check_for_player:
                 print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
                 if correct_results.get(move, -1) != next_depth_shannon_number:
                     print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
                     break
                     # pass
+            elif current_depth == 0 and check_for_player:
+                print(bcolors.CREDBG + 'INVALID' + bcolors.CEND)
 
         if current_depth == 0:
             match = True
             # If we get this far, make sure the dictionaries match
             for k, v in correct_results.items():
                 if all_move_history.get(k, -1) != v:
-                    print(f'MY RESULTS FOR {k} {all_move_history.get(k, -1)}   STOCKFISH RESULTS FOR {k} {v}')
+                    print(f'MY RESULTS FOR {k} {all_move_history.get(k, -1):0,}   STOCKFISH RESULTS FOR {k} {v:0,}')
                     match = False
             for k, v in all_move_history.items():
                 if correct_results.get(k, -1) != v:
-                    print(f'MY RESULTS FOR {k} {v}   STOCKFISH RESULTS FOR {k} {correct_results.get(k, -1)}')
+                    print(f'MY RESULTS FOR {k} {v:0,}   STOCKFISH RESULTS FOR {k} {correct_results.get(k, -1):0,}')
                     match = False
             if match:
                 print('******** ' + bcolors.CGREEN + ' LOOKS GOOD ' + bcolors.ENDC + '*************')
@@ -1158,9 +1129,11 @@ def shannon_test2():
 
     # fen_string = "4k3/6pp/8/7P/8/8/7P/4K3 b - - 0 3"
     # fen_string = "rnbqkbnr/pppppp2/7p/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq g6 0 3"
-    fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    # fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    fen_string = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -"
     chess_board.load_from_fen_string(fen_string=fen_string)
-    shannon_depth = 6
+    chess_board.print_board()
+    shannon_depth = 5
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
