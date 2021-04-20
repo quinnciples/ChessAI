@@ -8,6 +8,7 @@ Evalute function
 Search function
 """
 
+from Move import Move
 from bcolors import bcolors
 from math import log2, inf
 import logging
@@ -930,7 +931,8 @@ class BitBoardChess:
             destinations = self.process_rook_move(rook_square, piece_color=piece_color)
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    # all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves.append(Move.from_ufci(ufci_move=f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}'))
                     all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** Queens ********************
@@ -958,14 +960,21 @@ class BitBoardChess:
         # self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)] = (all_possible_moves, all_possible_moves_mask)
         return all_possible_moves, all_possible_moves_mask
 
-    def apply_move(self, move: str) -> None:
+    def apply_move(self, move) -> None:
         """
         Do I need the capture checks? Can I just & ~ the whole thing?
         """
-        start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
-        end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
-        start_mask = BitBoardChess.convert_position_to_mask(start_square)
-        end_mask = BitBoardChess.convert_position_to_mask(end_square)
+        if isinstance(move, Move):
+            start_square = move.starting_square
+            end_square = move.ending_mask
+            start_mask = move.starting_mask
+            end_mask = move.ending_mask
+        elif isinstance(move, str):
+            start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
+            end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
+            start_mask = BitBoardChess.convert_position_to_mask(start_square)
+            end_mask = BitBoardChess.convert_position_to_mask(end_square)
+
         EN_PASSANT_FLAG = False
 
         if self.WHITE_PIECES & start_mask:

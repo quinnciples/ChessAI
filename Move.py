@@ -1,4 +1,6 @@
 from math import log2
+import logging
+log = logging.getLogger(__name__)
 
 
 class Move:
@@ -19,6 +21,9 @@ class Move:
         self.is_promotion = is_promotion
         self.is_castle = is_castle
         self.extra_piece_info = extra_piece_info  # Stores type of piece being promoted to, captured, or direction of castling
+
+    def __str__(self):
+        return self.ufci_format
 
     @classmethod
     def from_ufci(cls, ufci_move: str, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
@@ -48,11 +53,11 @@ class Move:
 
     @property
     def starting_mask(self) -> int:
-        return 1 << self.starting_square
+        return 1 << (63 - self.starting_square)
 
     @property
     def ending_mask(self) -> int:
-        return 1 << self.ending_square
+        return 1 << (63 - self.ending_square)
 
     @property
     def ufci_format(self) -> str:
