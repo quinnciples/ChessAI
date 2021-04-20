@@ -25,6 +25,25 @@ class Move:
     def __str__(self):
         return self.ufci_format
 
+    """
+    __hash__, __eq__, __ne__ probably need to be looked at later
+    to determine if objects are truly identical to each other.
+    """
+
+    def __hash__(self):
+        return hash(self.ufci_format)
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.ufci_format == other
+        elif isinstance(other, Move):
+            return self.ufci_format == other.ufci_format
+
+    def __ne__(self, other):
+        # Not strictly necessary, but to avoid having both x==y and x!=y
+        # True at the same time
+        return not(self == other)
+
     @classmethod
     def from_ufci(cls, ufci_move: str, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
         starting_square = Move.convert_algebraic_notation_to_position(algebraic_notation=ufci_move[0:2])
