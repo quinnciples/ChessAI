@@ -464,9 +464,21 @@ class BitBoardChess:
         file = ord(algebraic_notation[0]) - 97
         rank = int(algebraic_notation[1])
         rank = 8 - rank
-        rank *= 8
-        board_position = rank + file
+        board_position = (rank * 8) + file
         return board_position
+
+    @staticmethod
+    def convert_algebraic_notation_to_mask(algebraic_notation: str) -> int:
+        """
+        Converts a two-character algebraic notation (b2, c4, etc) to a bit representation of
+        the board.
+        """
+        algebraic_notation = algebraic_notation.lower()
+        file = ord(algebraic_notation[0]) - 97
+        rank = int(algebraic_notation[1])
+        rank = 8 - rank
+        rank *= 8
+        return BitBoardChess.convert_position_to_mask(board_position=rank + file)
 
     @staticmethod
     def convert_position_to_mask(board_position: int) -> int:
@@ -477,6 +489,15 @@ class BitBoardChess:
         bit_value = board & ~(board - 1)
         while bit_value:
             yield 63 - int(log2(bit_value))
+            board = board & ~bit_value
+            bit_value = board & ~(board - 1)
+        return
+
+    @staticmethod
+    def generate_masks_from_mask(board: int) -> int:
+        bit_value = board & ~(board - 1)
+        while bit_value:
+            yield bit_value
             board = board & ~bit_value
             bit_value = board & ~(board - 1)
         return
@@ -762,7 +783,7 @@ class BitBoardChess:
         # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
         initial_position = 0 | 1 << (63 - board_position)
         if (piece_color == BitBoardChess.WHITE and board_position > 15) or (piece_color == BitBoardChess.BLACK and board_position < 48):
-            return None
+            return 0
 
         # Move
         if piece_color == BitBoardChess.WHITE:
@@ -834,9 +855,16 @@ class BitBoardChess:
                 castling_options.append('O-O-O')
         return castling_options
 
-    def generate_all_possible_moves(self, piece_color: int) -> list:
-        if (piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT) in self.MOVE_CACHE:
-            return self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)]
+    def generate_all_possible_moves(self, piece_color: int) -> tuple:
+        """
+        """
+        # Move structure
+        # (starting square, ending square, starting mask, ending mask, piece type, move type, related piece info)
+        # piece type = pawn, knight, bishop, rook, queen, king
+        # move type = move, capture, promotion, castle, check?
+        # related piece info = piece type captured, piece type for promotion
+        # if (piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT) in self.MOVE_CACHE:
+        #     return self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)]
 
         all_possible_moves = []
         all_possible_moves_mask = 0
@@ -927,7 +955,7 @@ class BitBoardChess:
         #     all_possible_moves.append(f'{castling_option}')
 
         # log.info(f"""{len(all_possible_moves)} moves generated for {"WHITE" if piece_color == BitBoardChess.WHITE else "BLACK"}: {all_possible_moves}""")
-        self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)] = (all_possible_moves, all_possible_moves_mask)
+        # self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)] = (all_possible_moves, all_possible_moves_mask)
         return all_possible_moves, all_possible_moves_mask
 
     def apply_move(self, move: str) -> None:
