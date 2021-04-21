@@ -932,7 +932,8 @@ class BitBoardChess:
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
                     # all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves.append(Move.from_ufci(ufci_move=f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}'))
+                    all_possible_moves.append(Move(starting_square=rook_square, ending_square=destination))
+                    # all_possible_moves.append((f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}', rook_square, destination, BitBoardChess.convert_position_to_mask(rook_square), BitBoardChess.convert_position_to_mask(destination)))
                     all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
 
         # ******************** Queens ********************
@@ -969,6 +970,11 @@ class BitBoardChess:
             end_square = move.ending_mask
             start_mask = move.starting_mask
             end_mask = move.ending_mask
+        elif isinstance(move, tuple):
+            start_square = move[1]
+            end_square = move[2]
+            start_mask = move[3]
+            end_mask = move[4]
         elif isinstance(move, str):
             start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
             end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
@@ -1105,7 +1111,10 @@ class BitBoardChess:
         next_player = BitBoardChess.WHITE if player_turn == BitBoardChess.BLACK else BitBoardChess.BLACK
         for idx, move in enumerate(all_possible_moves):
             if current_depth == 0:
-                print(f'{datetime.now()} - Analyzing {move} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
+                if isinstance(move, tuple):
+                    print(f'{datetime.now()} - Analyzing {move[0]} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
+                else:
+                    print(f'{datetime.now()} - Analyzing {move} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
 
             self.save_state()
             self.apply_move(move)
@@ -1116,15 +1125,26 @@ class BitBoardChess:
                 next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, move_history=move_history)
                 shannon += next_depth_shannon_number
                 if current_depth == 0:
-                    all_move_history[move] = next_depth_shannon_number
+                    if isinstance(move, tuple):
+                        all_move_history[move[0]] = next_depth_shannon_number
+                    else:    
+                        all_move_history[move] = next_depth_shannon_number
 
             # move_history.pop()
             self.load_state()
             if current_depth == 0 and not check_for_player:
-                print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
-                if correct_results.get(move, -1) != next_depth_shannon_number:
-                    print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
-                    break
+                if isinstance(move, tuple):
+                    print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move[0], -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
+                else:
+                    print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
+                if isinstance(move, tuple):
+                    if correct_results.get(move[0], -1) != next_depth_shannon_number:
+                        print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
+                        break
+                else:
+                    if correct_results.get(move, -1) != next_depth_shannon_number:
+                        print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
+                        break
                     # pass
             elif current_depth == 0 and check_for_player:
                 print(bcolors.CREDBG + 'INVALID' + bcolors.CEND)

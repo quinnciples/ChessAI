@@ -1,3 +1,4 @@
+from datetime import datetime
 from math import log2
 import logging
 log = logging.getLogger(__name__)
@@ -21,6 +22,8 @@ class Move:
         self.is_promotion = is_promotion
         self.is_castle = is_castle
         self.extra_piece_info = extra_piece_info  # Stores type of piece being promoted to, captured, or direction of castling
+        
+        self._ufci_format = None
 
     def __str__(self):
         return self.ufci_format
@@ -48,12 +51,14 @@ class Move:
     def from_ufci(cls, ufci_move: str, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
         starting_square = Move.convert_algebraic_notation_to_position(algebraic_notation=ufci_move[0:2])
         ending_square = Move.convert_algebraic_notation_to_position(algebraic_notation=ufci_move[2:])
-        return Move(starting_square=starting_square, ending_square=ending_square, is_capture=is_capture, is_en_passant=is_en_passant, is_check=is_check, is_promotion=is_promotion, is_castle=is_castle, extra_piece_info=extra_piece_info)
+        new_move = Move(starting_square=starting_square, ending_square=ending_square, is_capture=is_capture, is_en_passant=is_en_passant, is_check=is_check, is_promotion=is_promotion, is_castle=is_castle, extra_piece_info=extra_piece_info)
+        new_move._ufci_format = ufci_move
+        return new_move
 
     @classmethod
     def from_masks(cls, starting_mask: int, ending_mask: int, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
-        starting_square = Move.convert_position_to_mask(board=starting_mask)
-        ending_square = Move.convert_position_to_mask(board=ending_mask)
+        starting_square = Move.convert_mask_to_position(board=starting_mask)
+        ending_square = Move.convert_mask_to_position(board=ending_mask)
         return Move(starting_square=starting_square, ending_square=ending_square, is_capture=is_capture, is_en_passant=is_en_passant, is_check=is_check, is_promotion=is_promotion, is_castle=is_castle, extra_piece_info=extra_piece_info)
 
     @staticmethod
@@ -66,7 +71,7 @@ class Move:
         return (rank * 8) + file
 
     @staticmethod
-    def convert_position_to_mask(board: int) -> int:
+    def convert_mask_to_position(board: int) -> int:
         bit_value = board & ~(board - 1)
         return 63 - int(log2(bit_value))
 
@@ -80,15 +85,19 @@ class Move:
 
     @property
     def ufci_format(self) -> str:
-        start_rank = 8 - (self.starting_square // 8)
-        start_file = self.starting_square % 8 + 1
-        start = chr(97 + start_file - 1) + str(start_rank)
+        if self._ufci_format is not None:
+            return self._ufci_format
+        else:
+            start_rank = 8 - (self.starting_square // 8)
+            start_file = self.starting_square % 8 + 1
+            start = chr(97 + start_file - 1) + str(start_rank)
 
-        end_rank = 8 - (self.ending_square // 8)
-        end_file = self.ending_square % 8 + 1
-        end = chr(97 + end_file - 1) + str(end_rank)
+            end_rank = 8 - (self.ending_square // 8)
+            end_file = self.ending_square % 8 + 1
+            end = chr(97 + end_file - 1) + str(end_rank)
+            self._ufci_format = start + end
 
-        return start + end
+        return self._ufci_format
 
 
 if __name__ == '__main__':
@@ -105,3 +114,25 @@ if __name__ == '__main__':
     print(ufci_move.ufci_format)
     print(ufci_move.starting_mask)
     print(ufci_move.ending_mask)
+
+    mask_move = Move.from_masks(starting_mask=2305843009213693952, ending_mask=549755813888)
+    print(mask_move.starting_square)
+    print(mask_move.ending_square)
+    print(mask_move.ufci_format)
+    print(mask_move.starting_mask)
+    print(mask_move.ending_mask)
+
+    print(base_move == ufci_move == mask_move)
+
+    print('Creating objects...')
+    objects = [Move.from_ufci('a4d3') for x in range(10_000_000)]
+    print('Creating objects... Done.')
+    start_time = datetime.now()
+    for obj in objects:
+        obj.ufci_format
+    print(datetime.now() - start_time)
+
+    start_time = datetime.now()
+    for obj in objects:
+        obj.ufci_format
+    print(datetime.now() - start_time)
