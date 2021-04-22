@@ -27,6 +27,7 @@ logging.basicConfig(level=logging.CRITICAL,
 log = logging.getLogger(__name__)
 
 all_move_history = {}
+all_move_details = {'Moves': 0, 'Captures': 0, 'En Passant': 0}
 
 
 class BitBoardChess:
@@ -1120,15 +1121,20 @@ class BitBoardChess:
 
         return best_score
 
-    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, move_history: list = [], fen_string_to_test: str = '') -> int:
+    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, fen_string_to_test: str = '', is_capture: bool = False, is_en_passant: bool = False) -> int:
         """
         """
+
         if depth_limit == current_depth:
-            # print(move_history)
+            all_move_details['Moves'] += 1
+            all_move_details['Captures'] += 1 if is_capture else 0
+            all_move_details['En Passant'] += 1 if is_en_passant else 0
             return 1
 
         shannon = 0
         all_possible_moves = [move for move in self.generate_all_possible_moves(piece_color=player_turn)[0]]
+        move_details = {'Moves': 0, 'Captures': 0}
+
         if current_depth == 0:
             progress_number_of_moves = len(all_possible_moves)
             correct_results = get_stockfish_data(fen_string=fen_string_to_test, shannon_depth=depth_limit)
@@ -1138,40 +1144,26 @@ class BitBoardChess:
         next_player = BitBoardChess.WHITE if player_turn == BitBoardChess.BLACK else BitBoardChess.BLACK
         for idx, move in enumerate(all_possible_moves):
             if current_depth == 0:
-                if isinstance(move, tuple):
-                    print(f'{datetime.now()} - Analyzing {move[0]} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
-                else:
-                    print(f'{datetime.now()} - Analyzing {move} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
+                print(f'{datetime.now()} - Analyzing {move} #{idx + 1} out of {progress_number_of_moves}... ', end='', flush=True)
 
             self.save_state()
             self.apply_move(move)
-
-            # move_history.append(move)
             check_for_player = self.player_is_in_check(player_turn)
+
             if not check_for_player:
-                next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, move_history=move_history)
+                next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, is_capture=move.is_capture, is_en_passant=move.is_en_passant)
                 shannon += next_depth_shannon_number
+
                 if current_depth == 0:
-                    if isinstance(move, tuple):
-                        all_move_history[move[0]] = next_depth_shannon_number
-                    else:
-                        all_move_history[move] = next_depth_shannon_number
+                    all_move_history[move] = next_depth_shannon_number
 
             # move_history.pop()
             self.load_state()
             if current_depth == 0 and not check_for_player:
-                if isinstance(move, tuple):
-                    print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move[0], -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
-                else:
-                    print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
-                if isinstance(move, tuple):
-                    if correct_results.get(move[0], -1) != next_depth_shannon_number:
-                        print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
-                        break
-                else:
-                    if correct_results.get(move, -1) != next_depth_shannon_number:
-                        print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
-                        break
+                print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
+                if correct_results.get(move, -1) != next_depth_shannon_number:
+                    print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
+                    break
                     # pass
             elif current_depth == 0 and check_for_player:
                 print(bcolors.CREDBG + 'INVALID' + bcolors.CEND)
@@ -1192,10 +1184,10 @@ class BitBoardChess:
             else:
                 print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
 
-            # print()
-            # print('************** MY MOVES ********************')
-            # print()
-            # print(all_possible_moves)
+            print()
+            print('************** MY MOVES ********************')
+            print()
+            print(all_move_details)
         return shannon
 
 
