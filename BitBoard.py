@@ -859,8 +859,8 @@ class BitBoardChess:
     def determine_if_move_is_capture(self, destination: int, piece_color: int) -> bool:
         return self.BLACK_PIECES & BitBoardChess.convert_position_to_mask(destination) if piece_color == BitBoardChess.WHITE else self.WHITE_PIECES & BitBoardChess.convert_position_to_mask(destination)
 
-    def determine_captured_piece(self, board_position: int, piece_color: int) -> bool:
-        destination_mask = BitBoardChess.convert_position_to_mask(board_position) 
+    def determine_captured_piece(self, board_position: int, piece_color: int) -> int:
+        destination_mask = BitBoardChess.convert_position_to_mask(board_position)
         if piece_color == BitBoardChess.WHITE:
             if destination_mask & self.BLACK_PAWNS:
                 return Move.PAWN
@@ -876,6 +876,7 @@ class BitBoardChess:
                 return Move.KING
             else:
                 return Move.NONE
+
         elif piece_color == BitBoardChess.BLACK:
             if destination_mask & self.WHITE_PAWNS:
                 return Move.PAWN
@@ -892,17 +893,14 @@ class BitBoardChess:
             else:
                 return Move.NONE
 
+        return Move.NONE
+
     def generate_all_possible_moves(self, piece_color: int) -> tuple:
         """
         """
-        # Move structure
-        # (starting square, ending square, starting mask, ending mask, piece type, move type, related piece info)
-        # piece type = pawn, knight, bishop, rook, queen, king
-        # move type = move, capture, promotion, castle, check?
-        # related piece info = piece type captured, piece type for promotion
         if (piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT) in self.MOVE_CACHE:
             return self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)]
-        
+
         all_possible_moves = []
         all_possible_moves_mask = 0
         # ******************** Pawns ********************
@@ -1156,7 +1154,7 @@ class BitBoardChess:
                 if current_depth == 0:
                     if isinstance(move, tuple):
                         all_move_history[move[0]] = next_depth_shannon_number
-                    else:    
+                    else:
                         all_move_history[move] = next_depth_shannon_number
 
             # move_history.pop()
@@ -1232,6 +1230,7 @@ def shannon_test2():
     # with open("move_cache.json", "wb") as cache_file:
     #     pickle.dump(chess_board.MOVE_CACHE, cache_file)
     # print('Writing cache... Done.')
+
 
 def shannon_test_starting_position():
     chess_board = BitBoardChess()

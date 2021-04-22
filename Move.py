@@ -22,7 +22,7 @@ class Move:
         self.is_promotion = is_promotion
         self.is_castle = is_castle
         self.extra_piece_info = extra_piece_info  # Stores type of piece being promoted to, captured, or direction of castling
-        
+
         self._ufci_format = None
 
     def __str__(self):
@@ -40,7 +40,7 @@ class Move:
         if isinstance(other, str):
             return self.ufci_format == other
         elif isinstance(other, Move):
-            return self.ufci_format == other.ufci_format
+            return self.starting_square == other.starting_square and self.ending_square == other.ending_square
 
     def __ne__(self, other):
         # Not strictly necessary, but to avoid having both x==y and x!=y
@@ -98,6 +98,10 @@ class Move:
             self._ufci_format = start + end
 
         return self._ufci_format
+
+    @property
+    def estimated_score(self) -> int:
+        return 0
 
 
 if __name__ == '__main__':
