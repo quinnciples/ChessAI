@@ -1,6 +1,6 @@
 """
 DOUBLE-CHECK MOVEMENT MASK DEALY WITH OFFSET BIT FOR CURRENT POSITION!!!
-DO NEW CHECK BENCHMARK
+NEED TO FIX PAWN PROMOTION TO NOT MAKE CHECK TEST PASS (OR FAIL?) WITH KING IN FRONT OF PAWN ON 7TH RANK
 NEED TO TEST THE URDL AND ULDR MASKS TO EXCLUDE CURRENT SQUARE!!!
 To do - handle pawn promotion
 NEED TO MAKE SURE EN PASSANT IS HANDLED CORRECTLY - LOOK AT REAL FEN STRINGS LIKE THIS -- rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 -- after 1 e4
@@ -8,6 +8,7 @@ Evalute function
 Search function
 """
 
+from Move import Move
 from bcolors import bcolors
 from math import log2, inf
 import logging
@@ -26,6 +27,7 @@ logging.basicConfig(level=logging.CRITICAL,
 log = logging.getLogger(__name__)
 
 all_move_history = {}
+all_move_details = {'Moves': 0, 'Captures': 0, 'En Passant': 0}
 
 
 class BitBoardChess:
@@ -464,9 +466,21 @@ class BitBoardChess:
         file = ord(algebraic_notation[0]) - 97
         rank = int(algebraic_notation[1])
         rank = 8 - rank
-        rank *= 8
-        board_position = rank + file
+        board_position = (rank * 8) + file
         return board_position
+
+    @staticmethod
+    def convert_algebraic_notation_to_mask(algebraic_notation: str) -> int:
+        """
+        Converts a two-character algebraic notation (b2, c4, etc) to a bit representation of
+        the board.
+        """
+        algebraic_notation = algebraic_notation.lower()
+        file = ord(algebraic_notation[0]) - 97
+        rank = int(algebraic_notation[1])
+        rank = 8 - rank
+        rank *= 8
+        return BitBoardChess.convert_position_to_mask(board_position=rank + file)
 
     @staticmethod
     def convert_position_to_mask(board_position: int) -> int:
@@ -477,6 +491,15 @@ class BitBoardChess:
         bit_value = board & ~(board - 1)
         while bit_value:
             yield 63 - int(log2(bit_value))
+            board = board & ~bit_value
+            bit_value = board & ~(board - 1)
+        return
+
+    @staticmethod
+    def generate_masks_from_mask(board: int) -> int:
+        bit_value = board & ~(board - 1)
+        while bit_value:
+            yield bit_value
             board = board & ~bit_value
             bit_value = board & ~(board - 1)
         return
@@ -762,7 +785,7 @@ class BitBoardChess:
         # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
         initial_position = 0 | 1 << (63 - board_position)
         if (piece_color == BitBoardChess.WHITE and board_position > 15) or (piece_color == BitBoardChess.BLACK and board_position < 48):
-            return None
+            return 0
 
         # Move
         if piece_color == BitBoardChess.WHITE:
@@ -834,7 +857,48 @@ class BitBoardChess:
                 castling_options.append('O-O-O')
         return castling_options
 
-    def generate_all_possible_moves(self, piece_color: int) -> list:
+    def determine_if_move_is_capture(self, destination: int, piece_color: int) -> bool:
+        return self.BLACK_PIECES & BitBoardChess.convert_position_to_mask(destination) if piece_color == BitBoardChess.WHITE else self.WHITE_PIECES & BitBoardChess.convert_position_to_mask(destination)
+
+    def determine_captured_piece(self, board_position: int, piece_color: int) -> int:
+        destination_mask = BitBoardChess.convert_position_to_mask(board_position)
+        if piece_color == BitBoardChess.WHITE:
+            if destination_mask & self.BLACK_PAWNS:
+                return Move.PAWN
+            elif destination_mask & self.BLACK_KNIGHTS:
+                return Move.KNIGHT
+            elif destination_mask & self.BLACK_BISHOPS:
+                return Move.BISHOP
+            elif destination_mask & self.BLACK_ROOKS:
+                return Move.ROOK
+            elif destination_mask & self.BLACK_QUEENS:
+                return Move.QUEEN
+            elif destination_mask & self.BLACK_KINGS:
+                return Move.KING
+            else:
+                return Move.NONE
+
+        elif piece_color == BitBoardChess.BLACK:
+            if destination_mask & self.WHITE_PAWNS:
+                return Move.PAWN
+            elif destination_mask & self.WHITE_KNIGHTS:
+                return Move.KNIGHT
+            elif destination_mask & self.WHITE_BISHOPS:
+                return Move.BISHOP
+            elif destination_mask & self.WHITE_ROOKS:
+                return Move.ROOK
+            elif destination_mask & self.WHITE_QUEENS:
+                return Move.QUEEN
+            elif destination_mask & self.WHITE_KINGS:
+                return Move.KING
+            else:
+                return Move.NONE
+
+        return Move.NONE
+
+    def generate_all_possible_moves(self, piece_color: int) -> tuple:
+        """
+        """
         if (piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT) in self.MOVE_CACHE:
             return self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)]
 
@@ -846,80 +910,75 @@ class BitBoardChess:
             destinations = self.process_pawn_move(pawn_square, piece_color=piece_color)
             if destinations:
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
+                    all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination))
                     # Pawn movement is not a capture -- all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+
         # Pawn captures - LEFT
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_capture_left(pawn_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
+
         # Pawn captures - RIGHT
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_capture_right(pawn_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
+
         # Pawn captures - En Passant
         if self.EN_PASSANT:
             for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
                 destinations = self.process_pawn_capture_en_passant(pawn_square, piece_color=piece_color)
-                if destinations:
-                    for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                        all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                        all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+                all_possible_moves_mask |= destinations
+                for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                    all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, is_en_passant=True, extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
+
         # Promotion
         for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_promotion(pawn_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}->Q')
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}->R')
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}->B')
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(pawn_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}->N')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.KNIGHT))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.BISHOP))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.ROOK))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.QUEEN))
 
         # ******************** Knights ********************
         for knight_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KNIGHTS if piece_color == BitBoardChess.WHITE else self.BLACK_KNIGHTS):
             destinations = self.process_knight_move(knight_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(knight_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=knight_square, ending_square=destination, is_capture=self.determine_if_move_is_capture(destination, piece_color), extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
 
         # ******************** Bishops ********************
         for bishop_square in BitBoardChess.generate_positions_from_mask(self.WHITE_BISHOPS if piece_color == BitBoardChess.WHITE else self.BLACK_BISHOPS):
             destinations = self.process_bishop_move(bishop_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(bishop_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=bishop_square, ending_square=destination, is_capture=self.determine_if_move_is_capture(destination, piece_color), extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
 
         # ******************** Rooks ********************
         for rook_square in BitBoardChess.generate_positions_from_mask(self.WHITE_ROOKS if piece_color == BitBoardChess.WHITE else self.BLACK_ROOKS):
             destinations = self.process_rook_move(rook_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(rook_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=rook_square, ending_square=destination, is_capture=self.determine_if_move_is_capture(destination, piece_color), extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
 
         # ******************** Queens ********************
         for queen_square in BitBoardChess.generate_positions_from_mask(self.WHITE_QUEENS if piece_color == BitBoardChess.WHITE else self.BLACK_QUEENS):
             destinations = self.process_queen_move(queen_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(queen_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=queen_square, ending_square=destination, is_capture=self.determine_if_move_is_capture(destination, piece_color), extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
 
         # ******************** King ********************
         for king_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KINGS if piece_color == BitBoardChess.WHITE else self.BLACK_KINGS):
             destinations = self.process_king_move(king_square, piece_color=piece_color)
-            if destinations:
-                for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(f'{BitBoardChess.convert_position_to_algebraic_notation(king_square)}{BitBoardChess.convert_position_to_algebraic_notation(destination)}')
-                    all_possible_moves_mask |= BitBoardChess.convert_position_to_mask(destination)
+            all_possible_moves_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=king_square, ending_square=destination, is_capture=self.determine_if_move_is_capture(destination, piece_color), extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
 
         # ******************** Castling ********************
         # castling_options = self.process_castling_moves(piece_color=piece_color)
@@ -930,14 +989,26 @@ class BitBoardChess:
         self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.EN_PASSANT)] = (all_possible_moves, all_possible_moves_mask)
         return all_possible_moves, all_possible_moves_mask
 
-    def apply_move(self, move: str) -> None:
+    def apply_move(self, move) -> None:
         """
         Do I need the capture checks? Can I just & ~ the whole thing?
         """
-        start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
-        end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
-        start_mask = BitBoardChess.convert_position_to_mask(start_square)
-        end_mask = BitBoardChess.convert_position_to_mask(end_square)
+        if isinstance(move, Move):
+            start_square = move.starting_square
+            end_square = move.ending_mask
+            start_mask = move.starting_mask
+            end_mask = move.ending_mask
+        elif isinstance(move, tuple):
+            start_square = move[1]
+            end_square = move[2]
+            start_mask = move[3]
+            end_mask = move[4]
+        elif isinstance(move, str):
+            start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
+            end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
+            start_mask = BitBoardChess.convert_position_to_mask(start_square)
+            end_mask = BitBoardChess.convert_position_to_mask(end_square)
+
         EN_PASSANT_FLAG = False
 
         if self.WHITE_PIECES & start_mask:
@@ -1050,15 +1121,20 @@ class BitBoardChess:
 
         return best_score
 
-    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, move_history: list = [], fen_string_to_test: str = '') -> int:
+    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, fen_string_to_test: str = '', is_capture: bool = False, is_en_passant: bool = False) -> int:
         """
         """
+
         if depth_limit == current_depth:
-            # print(move_history)
+            all_move_details['Moves'] += 1
+            all_move_details['Captures'] += 1 if is_capture else 0
+            all_move_details['En Passant'] += 1 if is_en_passant else 0
             return 1
 
         shannon = 0
         all_possible_moves = [move for move in self.generate_all_possible_moves(piece_color=player_turn)[0]]
+        move_details = {'Moves': 0, 'Captures': 0}
+
         if current_depth == 0:
             progress_number_of_moves = len(all_possible_moves)
             correct_results = get_stockfish_data(fen_string=fen_string_to_test, shannon_depth=depth_limit)
@@ -1072,12 +1148,12 @@ class BitBoardChess:
 
             self.save_state()
             self.apply_move(move)
-
-            # move_history.append(move)
             check_for_player = self.player_is_in_check(player_turn)
+
             if not check_for_player:
-                next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, move_history=move_history)
+                next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, is_capture=move.is_capture, is_en_passant=move.is_en_passant)
                 shannon += next_depth_shannon_number
+
                 if current_depth == 0:
                     all_move_history[move] = next_depth_shannon_number
 
@@ -1108,10 +1184,10 @@ class BitBoardChess:
             else:
                 print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
 
-            # print()
-            # print('************** MY MOVES ********************')
-            # print()
-            # print(all_possible_moves)
+            print()
+            print('************** MY MOVES ********************')
+            print()
+            print(all_move_details)
         return shannon
 
 
@@ -1146,6 +1222,18 @@ def shannon_test2():
     # with open("move_cache.json", "wb") as cache_file:
     #     pickle.dump(chess_board.MOVE_CACHE, cache_file)
     # print('Writing cache... Done.')
+
+
+def shannon_test_starting_position():
+    chess_board = BitBoardChess()
+    fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    chess_board.load_from_fen_string(fen_string=fen_string)
+    chess_board.print_board()
+    shannon_depth = 5
+    # all_move_history.clear()
+    start_time = datetime.now()
+    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
+    print()
 
 
 def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
@@ -1193,7 +1281,8 @@ def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
 
 
 if __name__ == '__main__':
-    shannon_test2()
+    # shannon_test2()
+    shannon_test_starting_position()
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:
