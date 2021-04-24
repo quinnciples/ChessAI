@@ -993,21 +993,10 @@ class BitBoardChess:
         """
         Do I need the capture checks? Can I just & ~ the whole thing?
         """
-        if isinstance(move, Move):
-            start_square = move.starting_square
-            end_square = move.ending_mask
-            start_mask = move.starting_mask
-            end_mask = move.ending_mask
-        elif isinstance(move, tuple):
-            start_square = move[1]
-            end_square = move[2]
-            start_mask = move[3]
-            end_mask = move[4]
-        elif isinstance(move, str):
-            start_square = BitBoardChess.convert_algebraic_notation_to_position(move[0:2])
-            end_square = BitBoardChess.convert_algebraic_notation_to_position(move[2:])
-            start_mask = BitBoardChess.convert_position_to_mask(start_square)
-            end_mask = BitBoardChess.convert_position_to_mask(end_square)
+        # start_square = move.starting_square
+        # end_square = move.ending_square
+        start_mask = move.starting_mask
+        end_mask = move.ending_mask
 
         EN_PASSANT_FLAG = False
 
@@ -1027,7 +1016,7 @@ class BitBoardChess:
                 EN_PASSANT_FLAG = True
 
             # Shift end_mask to the pawn location if this was an En Passant capture
-            if self.BLACK_PAWNS & (self.EN_PASSANT >> 8) and self.WHITE_PAWNS & self.EN_PASSANT:
+            elif self.BLACK_PAWNS & (self.EN_PASSANT >> 8) and self.WHITE_PAWNS & self.EN_PASSANT:
                 end_mask = end_mask >> 8
                 log.debug(f'En passant capture: {move}.')
 
@@ -1037,6 +1026,7 @@ class BitBoardChess:
                     if self.__getattribute__(CAPTURE_BOARD) & end_mask:
                         self.__setattr__(CAPTURE_BOARD, self.__getattribute__(CAPTURE_BOARD) & ~end_mask)
                         log.debug(f'Found BLACK piece being captured in {CAPTURE_BOARD}.')
+                        break
 
         elif self.BLACK_PIECES & start_mask:
             # piece_color = BitBoardChess.BLACK
@@ -1054,7 +1044,7 @@ class BitBoardChess:
                 EN_PASSANT_FLAG = True
 
             # Shift end_mask to the pawn location if this was an En Passant capture
-            if self.WHITE_PAWNS & (self.EN_PASSANT << 8) and self.BLACK_PAWNS & self.EN_PASSANT:
+            elif self.WHITE_PAWNS & (self.EN_PASSANT << 8) and self.BLACK_PAWNS & self.EN_PASSANT:
                 end_mask = end_mask << 8
                 log.debug(f'En passant capture: {move}.')
 
@@ -1064,6 +1054,7 @@ class BitBoardChess:
                     if self.__getattribute__(CAPTURE_BOARD) & end_mask:
                         self.__setattr__(CAPTURE_BOARD, self.__getattribute__(CAPTURE_BOARD) & ~end_mask)
                         log.debug(f'Found WHITE piece being captured in {CAPTURE_BOARD}.')
+                        break
 
         else:
             raise Exception('Move not found on board.')
