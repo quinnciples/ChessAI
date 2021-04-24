@@ -1,4 +1,9 @@
 """
+!!!
+!!!
+NEED TO DISABLE OPPONENT'S ABILITY TO CASTLE IF WE TAKE THEIR ROOK!!!
+!!!
+!!!
 DOUBLE-CHECK MOVEMENT MASK DEALY WITH OFFSET BIT FOR CURRENT POSITION!!!
 NEED TO FIX PAWN PROMOTION TO NOT MAKE CHECK TEST PASS (OR FAIL?) WITH KING IN FRONT OF PAWN ON 7TH RANK
 NEED TO TEST THE URDL AND ULDR MASKS TO EXCLUDE CURRENT SQUARE!!!
@@ -61,6 +66,11 @@ class BitBoardChess:
     BLACK = 0
     WHITE = 1
 
+    WHITE_KING_SIDE_CASTLE_FLAG = 8
+    WHITE_QUEEN_SIDE_CASTLE_FLAG = 4
+    BLACK_KING_SIDE_CASTLE_FLAG = 2
+    BLACK_QUEEN_SIDE_CASTLE_FLAG = 1
+
     BLACK_PIECE_ATTRIBUTES = ['BLACK_PAWNS', 'BLACK_KNIGHTS', 'BLACK_BISHOPS', 'BLACK_ROOKS', 'BLACK_QUEENS', 'BLACK_KINGS']
     WHITE_PIECE_ATTRIBUTES = ['WHITE_PAWNS', 'WHITE_KNIGHTS', 'WHITE_BISHOPS', 'WHITE_ROOKS', 'WHITE_QUEENS', 'WHITE_KINGS']
 
@@ -74,7 +84,7 @@ class BitBoardChess:
         self.HV_MASKS = [0] * 64
         self.ULDR_DIAGONAL_MASKS = [0] * 64
         self.URDL_DIAGONAL_MASKS = [0] * 64
-        self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
+        self.CASTLING = 0b1111
         self.FULL_MOVES = 0
         self.HALF_MOVES = 0
         self.GAME_STACK = []
@@ -114,7 +124,7 @@ class BitBoardChess:
 
         self.EN_PASSANT = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
-        self.CASTLING = {'K': 1, 'Q': 1, 'k': 1, 'q': 1}
+        self.CASTLING = 0b1111
 
         self.FULL_MOVES = 0
         self.HALF_MOVES = 0
@@ -209,12 +219,17 @@ class BitBoardChess:
                         position = position >> 1
 
         def process_castling(castling: str) -> None:
-            for key in self.CASTLING.keys():
-                if key in castling:
-                    self.CASTLING[key] = 1
-                else:
-                    self.CASTLING[key] = 0
-            log.info(f'Setting castling of {castling} to: {self.CASTLING}')
+            self.CASTLING = 0
+            if 'K' in castling:
+                self.CASTLING = self.CASTLING | BitBoardChess.WHITE_KING_SIDE_CASTLE_FLAG
+            if 'Q' in castling:
+                self.CASTLING = self.CASTLING | BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG
+            if 'k' in castling:
+                self.CASTLING = self.CASTLING | BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG
+            if 'q' in castling:
+                self.CASTLING = self.CASTLING | BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG
+
+            log.info(f'Setting castling of {castling} to: {self.CASTLING:4b}')
 
         def process_en_passant(en_passant: str) -> None:
             self.EN_PASSANT = 0
@@ -846,7 +861,7 @@ class BitBoardChess:
     def process_castling_moves(self, piece_color: int) -> list:
         castling_options = []
         if piece_color == BitBoardChess.WHITE:
-            if self.CASTLING['K']:
+            if self.CASTLING & self.WHITE_KING_SIDE_CASTLE_FLAG:
                 # Check that KING side is clear...
                 if not self.ALL_PIECES & 6:
                     # and player would not be in check along the way
@@ -861,7 +876,7 @@ class BitBoardChess:
                         self.load_state()
                     if not check:
                         castling_options.append((62, Move.KING))
-            if self.CASTLING['Q']:
+            if self.CASTLING & BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG:
                 # Check that QUEEN side is clear...
                 if not self.ALL_PIECES & 48:
                     #  and player would not be in check along the way
@@ -877,7 +892,7 @@ class BitBoardChess:
                     if not check:
                         castling_options.append((58, Move.QUEEN))
         elif piece_color == BitBoardChess.BLACK:
-            if self.CASTLING['k']:
+            if self.CASTLING & BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG:
                 # Check that KING side is clear...
                 if not self.ALL_PIECES & 432345564227567616:
                     # and player would not be in check along the way
@@ -892,7 +907,7 @@ class BitBoardChess:
                         self.load_state()
                     if not check:
                         castling_options.append((6, Move.KING))
-            if self.CASTLING['q']:
+            if self.CASTLING & BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG:
                 # Check that QUEEN side is clear...
                 if not self.ALL_PIECES & 3458764513820540928:
                     #  and player would not be in check along the way
@@ -1052,7 +1067,20 @@ class BitBoardChess:
         EN_PASSANT_FLAG = False
 
         if self.WHITE_PIECES & start_mask:
-            # piece_color = BitBoardChess.WHITE
+            # Check if we need to disable ability to castle
+            if self.CASTLING & BitBoardChess.WHITE_KING_SIDE_CASTLE_FLAG or self.CASTLING & BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG:
+                if self.WHITE_KINGS & start_mask:
+                    self.CASTLING &= ~BitBoardChess.WHITE_KING_SIDE_CASTLE_FLAG
+                    self.CASTLING &= ~BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG
+                    log.info(f'Disabling WHITE castling due to KING move. {move.ufci_format}')
+                elif self.WHITE_ROOKS & start_mask:
+                    if start_mask == 1:
+                        self.CASTLING &= ~BitBoardChess.WHITE_KING_SIDE_CASTLE_FLAG
+                        log.info('Disabling WHITE KING SIDE castling due to ROOK move.')
+                    elif start_mask == 128:
+                        self.CASTLING &= ~BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG
+                        log.info('Disabling WHITE QUEEN SIDE castling due to ROOK move.')
+
             for PIECE_BOARD in BitBoardChess.WHITE_PIECE_ATTRIBUTES:
                 if self.__getattribute__(PIECE_BOARD) & start_mask:
                     log.debug(f'Found WHITE piece in {PIECE_BOARD}.')
@@ -1084,8 +1112,8 @@ class BitBoardChess:
                 else:
                     raise Exception(f'Invalid castling move {move}.')
 
-                self.CASTLING['K'] = False
-                self.CASTLING['Q'] = False
+                self.CASTLING &= ~BitBoardChess.WHITE_KING_SIDE_CASTLE_FLAG
+                self.CASTLING &= ~BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG
 
             # Check for captures
             if self.BLACK_PIECES & end_mask:
@@ -1094,9 +1122,23 @@ class BitBoardChess:
                         self.__setattr__(CAPTURE_BOARD, self.__getattribute__(CAPTURE_BOARD) & ~end_mask)
                         log.debug(f'Found BLACK piece being captured in {CAPTURE_BOARD}.')
                         break
+                # Check if we captured BLACK's ROOK, and disable castling appropriately
 
         elif self.BLACK_PIECES & start_mask:
-            # piece_color = BitBoardChess.BLACK
+            # Check if we need to disable ability to castle
+            if self.CASTLING & BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG or self.CASTLING & BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG:
+                if self.BLACK_KINGS & start_mask:
+                    self.CASTLING &= ~BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG
+                    self.CASTLING &= ~BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG
+                    log.info(f'Disabling BLACK castling due to KING move. {move.ufci_format}')
+                elif self.BLACK_ROOKS & start_mask:
+                    if start_mask == (1 << (63 - 7)):
+                        self.CASTLING &= ~BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG
+                        log.info('Disabling BLACK KING SIDE castling due to ROOK move.')
+                    elif start_mask == (1 << (63 - 0)):
+                        self.CASTLING &= ~BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG
+                        log.info('Disabling BLACK QUEEN SIDE castling due to ROOK move.')
+
             for PIECE_BOARD in BitBoardChess.BLACK_PIECE_ATTRIBUTES:
                 if self.__getattribute__(PIECE_BOARD) & start_mask:
                     log.debug(f'Found BLACK piece in {PIECE_BOARD}.')
@@ -1128,8 +1170,8 @@ class BitBoardChess:
                 else:
                     raise Exception(f'Invalid castling move {move}.')
 
-                self.CASTLING['k'] = False
-                self.CASTLING['q'] = False
+                self.CASTLING &= ~BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG
+                self.CASTLING &= ~BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG
 
             # Check for captures
             if self.WHITE_PIECES & end_mask:
@@ -1150,6 +1192,7 @@ class BitBoardChess:
     def save_state(self) -> None:
         board_state = {attribute: self.__getattribute__(attribute) for attribute in BitBoardChess.SAVE_ORDER}
         self.GAME_STACK.append(board_state)
+        # print(f'SAVING {board_state}')
 
     def load_state(self) -> None:
         board_state = self.GAME_STACK.pop()
@@ -1234,7 +1277,7 @@ class BitBoardChess:
                 print(f'{next_depth_shannon_number:0,} vs Stockfish {correct_results.get(move, -1):0,}  //   ETA {start_time + ((datetime.now() - start_time) / ((idx + 1)/progress_number_of_moves))}')
                 if correct_results.get(move, -1) != next_depth_shannon_number:
                     print('******** ' + bcolors.CREDBG + '!!! NOPE !!!' + bcolors.ENDC + ' *************')
-                    # break
+                    break
                     # pass
             elif current_depth == 0 and check_for_player:
                 print(bcolors.CREDBG + 'INVALID' + bcolors.CEND)
@@ -1310,6 +1353,7 @@ def shannon_test_starting_position():
 def shannon_test_castling():
     chess_board = BitBoardChess()
     fen_string = "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"
+    # fen_string = "r3k2r/8/8/8/8/8/8/R3KR2 b Qkq - 1 1"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
     shannon_depth = 2
