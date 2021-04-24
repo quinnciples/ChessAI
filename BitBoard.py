@@ -1065,14 +1065,11 @@ class BitBoardChess:
         return
 
     def save_state(self) -> None:
-        # board_state = tuple(self.__getattribute__(attribute) for attribute in BitBoardChess.PUSH_ITEMS)
         board_state = {attribute: self.__getattribute__(attribute) for attribute in BitBoardChess.SAVE_ORDER}
         self.GAME_STACK.append(board_state)
 
     def load_state(self) -> None:
         board_state = self.GAME_STACK.pop()
-        # for idx, item in enumerate(BitBoardChess.PUSH_ITEMS):
-        #     self.__setattr__(item, board_state[idx])
         for attribute, value in board_state.items():
             self.__setattr__(attribute, value)
 
