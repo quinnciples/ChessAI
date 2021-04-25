@@ -27,6 +27,8 @@ class Move:
 
     def __str__(self):
         return self.ufci_format
+        
+            
 
     """
     __hash__, __eq__, __ne__ probably need to be looked at later
@@ -96,6 +98,17 @@ class Move:
             end_file = self.ending_square % 8 + 1
             end = chr(97 + end_file - 1) + str(end_rank)
             self._ufci_format = start + end
+
+            if self.is_promotion:
+                if self.extra_piece_info == Move.KNIGHT:
+                    suffix = 'n'
+                elif self.extra_piece_info == Move.BISHOP:
+                    suffix = 'b'
+                elif self.extra_piece_info == Move.ROOK:
+                    suffix = 'r'
+                elif self.extra_piece_info == Move.QUEEN:
+                    suffix = 'q'
+                self._ufci_format += suffix
 
         return self._ufci_format
 

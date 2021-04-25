@@ -1385,6 +1385,20 @@ def shannon_test_castling():
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
 
 
+def shannon_test_promotions():
+    chess_board = BitBoardChess()
+    fen_string = "4k3/1P4P1/8/8/8/8/8/4K3 w - - 0 1"
+    # fen_string = "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1"
+    # fen_string = "r3k3/8/8/8/8/8/8/R3K1Rr w Qq - 2 2"
+    # fen_string = "r3k3/8/8/8/8/8/8/R3KR1r b Qq - 3 2"
+    chess_board.load_from_fen_string(fen_string=fen_string)
+    chess_board.print_board()
+    shannon_depth = 1
+    # all_move_history.clear()
+    start_time = datetime.now()
+    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
+
+
 def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
     print('Getting Stockfish data...')
     import subprocess
@@ -1430,8 +1444,9 @@ def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
 
 
 if __name__ == '__main__':
-    shannon_test_starting_position()
+    # shannon_test_starting_position()
     # shannon_test_castling()
+    shannon_test_promotions()
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:
