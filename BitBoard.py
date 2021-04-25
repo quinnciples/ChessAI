@@ -33,7 +33,7 @@ logging.basicConfig(level=logging.CRITICAL,
 log = logging.getLogger(__name__)
 
 all_move_history = {}
-all_move_details = {'Moves': 0, 'Captures': 0, 'En Passant': 0, 'Castles': 0}
+all_move_details = {'Moves': 0, 'Captures': 0, 'En Passant': 0, 'Castles': 0, 'Promotions': 0}
 
 
 class BitBoardChess:
@@ -1364,7 +1364,7 @@ def shannon_test_starting_position():
     fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 5
+    shannon_depth = 4
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
