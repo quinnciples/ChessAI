@@ -1435,17 +1435,17 @@ def shannon_test_promotions():
 def shannon_test_en_passant():
     chess_board = BitBoardChess()
     fen_string = "3k4/8/8/3pP3/8/8/8/4K3 w - d6 0 2"
-    fen_string = "3k4/8/8/3pP3/8/8/5K2/8 b - - 1 2"
-    fen_string = "8/4k3/8/3pP3/8/8/5K2/8 w - - 2 3"
-    fen_string = "8/4k3/8/3pP3/8/6K1/8/8 b - - 3 3"
-    fen_string = "8/8/4k3/3pP3/8/6K1/8/8 w - - 4 4"
-    fen_string = "8/8/4k3/3pP3/6K1/8/8/8 b - - 5 4"
+    # fen_string = "3k4/8/8/3pP3/8/8/5K2/8 b - - 1 2"
+    # fen_string = "8/4k3/8/3pP3/8/8/5K2/8 w - - 2 3"
+    # fen_string = "8/4k3/8/3pP3/8/6K1/8/8 b - - 3 3"
+    # fen_string = "8/8/4k3/3pP3/8/6K1/8/8 w - - 4 4"
+    # fen_string = "8/8/4k3/3pP3/6K1/8/8/8 b - - 5 4"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 1
+    shannon_depth = 8
     # all_move_history.clear()
     start_time = datetime.now()
-    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.BLACK, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
+    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
 
 
 def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
