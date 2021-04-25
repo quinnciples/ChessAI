@@ -1206,12 +1206,25 @@ class BitBoardChess:
                         self.CASTLING &= ~BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG
                         log.info('Disabling BLACK QUEEN SIDE castling due to ROOK move.')
 
-            for PIECE_BOARD in BitBoardChess.BLACK_PIECE_ATTRIBUTES:
-                if self.__getattribute__(PIECE_BOARD) & start_mask:
-                    log.debug(f'Found BLACK piece in {PIECE_BOARD}.')
-                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) & ~start_mask)
-                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
-                    break
+            if not move.is_promotion:
+                for PIECE_BOARD in BitBoardChess.BLACK_PIECE_ATTRIBUTES:
+                    if self.__getattribute__(PIECE_BOARD) & start_mask:
+                        log.debug(f'Found BLACK piece in {PIECE_BOARD}.')
+                        self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) & ~start_mask)
+                        self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
+                        break
+            else:
+                # Remove the pawn from the board
+                self.BLACK_PAWNS &= ~start_mask
+                # Replace it with the promoted piece
+                if move.extra_piece_info == Move.KNIGHT:
+                    self.BLACK_KNIGHTS |= end_mask
+                elif move.extra_piece_info == Move.BISHOP:
+                    self.BLACK_BISHOPS |= end_mask
+                elif move.extra_piece_info == Move.ROOK:
+                    self.BLACK_ROOKS |= end_mask
+                elif move.extra_piece_info == Move.QUEEN:
+                    self.BLACK_QUEENS |= end_mask
 
             # Pawn related moves
             # # Pawn moved 2 space -> En Passant move
@@ -1401,13 +1414,13 @@ def shannon_test_castling():
 
 def shannon_test_promotions():
     chess_board = BitBoardChess()
-    fen_string = "4k3/1P6/6P/8/8/8/8/4K3 w - - 0 1"
+    fen_string = "2n1k3/1P6/6P/8/8/8/1p4p1/4K3 w - - 0 1"
     # fen_string = "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1"
     # fen_string = "r3k3/8/8/8/8/8/8/R3K1Rr w Qq - 2 2"
     # fen_string = "r3k3/8/8/8/8/8/8/R3KR1r b Qq - 3 2"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 5
+    shannon_depth = 1
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
