@@ -1,7 +1,8 @@
 """
 !!!
 !!!
-NEED TO DISABLE OPPONENT'S ABILITY TO CASTLE IF WE TAKE THEIR ROOK!!!
+NEED TO DISABLE OPPONENT'S ABILITY TO CASTLE IF WE TAKE THEIR ROOK!!! - Done
+Check that en passant captured piece identification works - do we need to do index +/- 8?
 !!!
 !!!
 DOUBLE-CHECK MOVEMENT MASK DEALY WITH OFFSET BIT FOR CURRENT POSITION!!!
@@ -792,7 +793,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
-    def process_pawn_promotion(self, board_position: int, piece_color: int) -> int:
+    def process_pawn_promotion_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the pawn piece.
         Assumes a one-square vertical move by default, unless that square is occupied by any piece.
@@ -811,6 +812,21 @@ class BitBoardChess:
             # Moving down the board, but not to the last rank -- promotion is handled separately
             move_mask = (initial_position >> 8) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EMPTY_SQUARES & BitBoardChess.RANK_1
 
+        # BitBoardChess.print_bitboard(move_mask)
+        return move_mask
+
+    def process_pawn_promotion_capture(self, board_position: int, piece_color: int) -> int:
+        """
+        Handles calculating all possible destination squares for the pawn piece.
+        Assumes a one-square vertical move by default, unless that square is occupied by any piece.
+        Pawns can promote to a Queen, Rook, Bishop, or Knight.
+        """
+        # print(' ' + '*' * 6 + ' ' + BitBoardChess.convert_position_to_algebraic_notation(board_position) + ' ' + '*' * 6)
+        initial_position = 0 | 1 << (63 - board_position)
+        if (piece_color == BitBoardChess.WHITE and board_position > 15) or (piece_color == BitBoardChess.BLACK and board_position < 48):
+            return 0
+
+        move_mask = 0
         # Capture LEFT and promote
         if piece_color == BitBoardChess.WHITE:
             # Moving up the board, but not to the last rank -- promotion is handled separately
@@ -981,35 +997,42 @@ class BitBoardChess:
                     all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination))
 
         # Pawn captures - LEFT
-        for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
+        # for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_capture_left(pawn_square, piece_color=piece_color)
             threat_mask |= destinations
             for destination in BitBoardChess.generate_positions_from_mask(destinations):
                 all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
 
         # Pawn captures - RIGHT
-        for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
+        # for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
             destinations = self.process_pawn_capture_right(pawn_square, piece_color=piece_color)
             threat_mask |= destinations
             for destination in BitBoardChess.generate_positions_from_mask(destinations):
                 all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
+
+        # Promotion
+        # for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
+            destinations = self.process_pawn_promotion_move(pawn_square, piece_color=piece_color)
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.KNIGHT))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.BISHOP))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.ROOK))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.QUEEN))
+
+            destinations = self.process_pawn_promotion_capture(pawn_square, piece_color=piece_color)
+            threat_mask |= destinations
+            for destination in BitBoardChess.generate_positions_from_mask(destinations):
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, is_promotion=True, extra_piece_info=Move.KNIGHT))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, is_promotion=True, extra_piece_info=Move.BISHOP))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, is_promotion=True, extra_piece_info=Move.ROOK))
+                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, is_promotion=True, extra_piece_info=Move.QUEEN))
 
         # Pawn captures - En Passant
         if self.EN_PASSANT:
             for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
                 destinations = self.process_pawn_capture_en_passant(pawn_square, piece_color=piece_color)
                 for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                    all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, is_en_passant=True, extra_piece_info=self.determine_captured_piece(board_position=destination, piece_color=piece_color)))
-
-        # Promotion
-        for pawn_square in BitBoardChess.generate_positions_from_mask(self.WHITE_PAWNS if piece_color == BitBoardChess.WHITE else self.BLACK_PAWNS):
-            destinations = self.process_pawn_promotion(pawn_square, piece_color=piece_color)
-            threat_mask |= destinations
-            for destination in BitBoardChess.generate_positions_from_mask(destinations):
-                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.KNIGHT))
-                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.BISHOP))
-                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.ROOK))
-                all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_promotion=True, extra_piece_info=Move.QUEEN))
+                    all_possible_moves.append(Move(starting_square=pawn_square, ending_square=destination, is_capture=True, is_en_passant=True, extra_piece_info=self.determine_captured_piece(board_position=destination + 8 if piece_color == BitBoardChess.WHITE else -8, piece_color=piece_color)))
 
         # ******************** Knights ********************
         for knight_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KNIGHTS if piece_color == BitBoardChess.WHITE else self.BLACK_KNIGHTS):
@@ -1407,8 +1430,8 @@ def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
 
 
 if __name__ == '__main__':
-    # shannon_test_starting_position()
-    shannon_test_castling()
+    shannon_test_starting_position()
+    # shannon_test_castling()
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:
