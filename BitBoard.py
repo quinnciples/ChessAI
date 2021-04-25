@@ -381,8 +381,8 @@ class BitBoardChess:
             for queen_square in BitBoardChess.generate_positions_from_mask(self.BLACK_QUEENS & self.QUEEN_MOVE_MASKS[KING_SQUARE]):
                 check_board |= self.QUEEN_MOVE_MASKS[queen_square]
             # ******************** Kings ********************
-            # for king_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KINGS):
-            #     check_board |= self.KING_MOVE_MASKS[king_square]
+            for king_square in BitBoardChess.generate_positions_from_mask(self.BLACK_KINGS):
+                check_board |= self.KING_MOVE_MASKS[king_square]
             log.debug('Check test END.')
             if self.WHITE_KINGS & check_board:
                 pass
@@ -406,8 +406,8 @@ class BitBoardChess:
             for queen_square in BitBoardChess.generate_positions_from_mask(self.WHITE_QUEENS & self.QUEEN_MOVE_MASKS[KING_SQUARE]):
                 check_board |= self.QUEEN_MOVE_MASKS[queen_square]
             # ******************** Kings ********************
-            # for king_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KINGS):
-            #     check_board |= self.KING_MOVE_MASKS[king_square]
+            for king_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KINGS):
+                check_board |= self.KING_MOVE_MASKS[king_square]
             log.debug('Check test END.')
             if self.BLACK_KINGS & check_board:
                 pass
@@ -983,6 +983,8 @@ class BitBoardChess:
     def generate_all_possible_moves(self, piece_color: int) -> tuple:
         """
         """
+        # color_label = 'WHITE' if piece_color == BitBoardChess.WHITE else 'BLACK'
+        # log.critical(f'Generating all potential moves for {color_label}...')
         if (piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.CASTLING, self.EN_PASSANT) in self.MOVE_CACHE:
             return self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.CASTLING, self.EN_PASSANT)]
 
@@ -1078,6 +1080,8 @@ class BitBoardChess:
         return all_possible_moves, threat_mask
 
     def generate_all_legal_moves(self, piece_color: int) -> tuple:
+        # color_label = 'WHITE' if piece_color == BitBoardChess.WHITE else 'BLACK'
+        # log.critical(f'Generating all legal moves for {color_label}...')
         if (piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.CASTLING, self.EN_PASSANT) in self.LEGAL_MOVE_CACHE:
             return self.LEGAL_MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.CASTLING, self.EN_PASSANT)]
         all_legal_moves = []
@@ -1091,6 +1095,8 @@ class BitBoardChess:
         else:
             # Check is not necessary to determine yet
             player_is_in_check = False
+
+        # log.critical(f'Filtering legal moves for {color_label}...')
 
         for move in all_possible_moves:
             if not (player_is_in_check and move.is_castle):
@@ -1158,7 +1164,7 @@ class BitBoardChess:
             # Shift end_mask to the pawn location if this was an En Passant capture
             elif self.BLACK_PAWNS & (self.EN_PASSANT >> 8) and self.WHITE_PAWNS & self.EN_PASSANT:
                 end_mask = end_mask >> 8
-                # log.debug(f'En passant capture: {move}.')
+                # log.critical(f'En passant capture: {move.is_en_passant} {move.extra_piece_info == Move.PAWN}.')
 
             # Castling related moves
             if move.is_castle:
@@ -1414,16 +1420,32 @@ def shannon_test_castling():
 
 def shannon_test_promotions():
     chess_board = BitBoardChess()
-    fen_string = "r1nk4/1P6/6P1/8/8/8/1p1p4/4K3 w - - 0 1"
+    fen_string = "r1nk4/1P6/6P1/8/8/8/1pp5/4K3 w - - 0 1"
     # fen_string = "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1"
     # fen_string = "r3k3/8/8/8/8/8/8/R3K1Rr w Qq - 2 2"
     # fen_string = "r3k3/8/8/8/8/8/8/R3KR1r b Qq - 3 2"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 1
+    shannon_depth = 4
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
+
+
+def shannon_test_en_passant():
+    chess_board = BitBoardChess()
+    fen_string = "3k4/8/8/3pP3/8/8/8/4K3 w - d6 0 2"
+    fen_string = "3k4/8/8/3pP3/8/8/5K2/8 b - - 1 2"
+    fen_string = "8/4k3/8/3pP3/8/8/5K2/8 w - - 2 3"
+    fen_string = "8/4k3/8/3pP3/8/6K1/8/8 b - - 3 3"
+    fen_string = "8/8/4k3/3pP3/8/6K1/8/8 w - - 4 4"
+    fen_string = "8/8/4k3/3pP3/6K1/8/8/8 b - - 5 4"
+    chess_board.load_from_fen_string(fen_string=fen_string)
+    chess_board.print_board()
+    shannon_depth = 1
+    # all_move_history.clear()
+    start_time = datetime.now()
+    print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.BLACK, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
 
 
 def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
@@ -1473,7 +1495,8 @@ def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
 if __name__ == '__main__':
     # shannon_test_starting_position()
     # shannon_test_castling()
-    shannon_test_promotions()
+    # shannon_test_promotions()
+    shannon_test_en_passant()
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:
