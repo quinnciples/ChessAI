@@ -1129,12 +1129,25 @@ class BitBoardChess:
                         self.CASTLING &= ~BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG
                         log.info('Disabling WHITE QUEEN SIDE castling due to ROOK move.')
 
-            for PIECE_BOARD in BitBoardChess.WHITE_PIECE_ATTRIBUTES:
-                if self.__getattribute__(PIECE_BOARD) & start_mask:
-                    log.debug(f'Found WHITE piece in {PIECE_BOARD}.')
-                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) & ~start_mask)
-                    self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
-                    break
+            if not move.is_promotion:
+                for PIECE_BOARD in BitBoardChess.WHITE_PIECE_ATTRIBUTES:
+                    if self.__getattribute__(PIECE_BOARD) & start_mask:
+                        log.debug(f'Found WHITE piece in {PIECE_BOARD}.')
+                        self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) & ~start_mask)
+                        self.__setattr__(PIECE_BOARD, self.__getattribute__(PIECE_BOARD) | end_mask)
+                        break
+            else:
+                # Remove the pawn from the board
+                self.WHITE_PAWNS &= ~start_mask
+                # Replace it with the promoted piece
+                if move.extra_piece_info == Move.KNIGHT:
+                    self.WHITE_KNIGHTS |= end_mask
+                elif move.extra_piece_info == Move.BISHOP:
+                    self.WHITE_BISHOPS |= end_mask
+                elif move.extra_piece_info == Move.ROOK:
+                    self.WHITE_ROOKS |= end_mask
+                elif move.extra_piece_info == Move.QUEEN:
+                    self.WHITE_QUEENS |= end_mask
 
             # Pawn related moves
             # Pawn moved 2 space -> En Passant move
@@ -1296,7 +1309,7 @@ class BitBoardChess:
 
         return best_score
 
-    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, fen_string_to_test: str = '', is_capture: bool = False, is_en_passant: bool = False, is_castle: bool = False) -> int:
+    def shannon_number(self, depth_limit: int, player_turn: int, current_depth: int = 0, fen_string_to_test: str = '', is_capture: bool = False, is_en_passant: bool = False, is_castle: bool = False, is_promotion: bool = False) -> int:
         """
         """
 
@@ -1305,6 +1318,7 @@ class BitBoardChess:
             all_move_details['Captures'] += 1 if is_capture else 0
             all_move_details['En Passant'] += 1 if is_en_passant else 0
             all_move_details['Castles'] += 1 if is_castle else 0
+            all_move_details['Promotions'] += 1 if is_promotion else 0
             return 1
 
         shannon = 0
@@ -1323,7 +1337,7 @@ class BitBoardChess:
 
             self.save_state()
             self.apply_move(move)
-            next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, is_capture=move.is_capture, is_en_passant=move.is_en_passant, is_castle=move.is_castle)
+            next_depth_shannon_number = self.shannon_number(depth_limit=depth_limit, player_turn=next_player, current_depth=current_depth + 1, is_capture=move.is_capture, is_en_passant=move.is_en_passant, is_castle=move.is_castle, is_promotion=move.is_promotion)
             shannon += next_depth_shannon_number
 
             if current_depth == 0:
@@ -1387,13 +1401,13 @@ def shannon_test_castling():
 
 def shannon_test_promotions():
     chess_board = BitBoardChess()
-    fen_string = "4k3/1P4P1/8/8/8/8/8/4K3 w - - 0 1"
+    fen_string = "4k3/1P6/6P/8/8/8/8/4K3 w - - 0 1"
     # fen_string = "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1"
     # fen_string = "r3k3/8/8/8/8/8/8/R3K1Rr w Qq - 2 2"
     # fen_string = "r3k3/8/8/8/8/8/8/R3KR1r b Qq - 3 2"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 1
+    shannon_depth = 5
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
