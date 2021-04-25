@@ -834,7 +834,7 @@ class BitBoardChess:
             move_mask |= ((initial_position << 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.BLACK_PIECES & BitBoardChess.RANK_8 & ~BitBoardChess.FILE_H)
         elif piece_color == BitBoardChess.BLACK:
             # Moving down the board, but not to the last rank -- promotion is handled separately
-            move_mask |= ((initial_position >> 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EMPTY_SQUARES & BitBoardChess.RANK_1 & ~BitBoardChess.FILE_H)
+            move_mask |= ((initial_position >> 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.WHITE_PIECES & BitBoardChess.RANK_1 & ~BitBoardChess.FILE_H)
 
         # Capture RIGHT and promote
         if piece_color == BitBoardChess.WHITE:
@@ -843,7 +843,7 @@ class BitBoardChess:
             move_mask |= ((initial_position << 7) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.BLACK_PIECES & BitBoardChess.RANK_8 & ~BitBoardChess.FILE_A)
         elif piece_color == BitBoardChess.BLACK:
             # Moving down the board, but not to the last rank -- promotion is handled separately
-            move_mask |= ((initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.EMPTY_SQUARES & BitBoardChess.RANK_1 & ~BitBoardChess.FILE_A)
+            move_mask |= ((initial_position >> 9) & BitBoardChess.SIXTY_FOUR_BIT_MASK & self.WHITE_PIECES & BitBoardChess.RANK_1 & ~BitBoardChess.FILE_A)
 
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
@@ -1414,7 +1414,7 @@ def shannon_test_castling():
 
 def shannon_test_promotions():
     chess_board = BitBoardChess()
-    fen_string = "2n1k3/1P6/6P/8/8/8/1p4p1/4K3 w - - 0 1"
+    fen_string = "r1nk4/1P6/6P1/8/8/8/1p1p4/4K3 w - - 0 1"
     # fen_string = "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1"
     # fen_string = "r3k3/8/8/8/8/8/8/R3K1Rr w Qq - 2 2"
     # fen_string = "r3k3/8/8/8/8/8/8/R3KR1r b Qq - 3 2"
