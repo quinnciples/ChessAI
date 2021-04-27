@@ -8,10 +8,10 @@ class Move:
     NONE = 0
     PAWN = 1
     KNIGHT = 2
-    BISHOP = 3
-    ROOK = 4
-    QUEEN = 5
-    KING = 6
+    BISHOP = 4
+    ROOK = 8
+    QUEEN = 16
+    KING = 32
 
     def __init__(self, starting_square: int = 0, ending_square: int = 0, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
         self.starting_square = starting_square
@@ -27,6 +27,8 @@ class Move:
 
     def __str__(self):
         return self.ufci_format
+        
+            
 
     """
     __hash__, __eq__, __ne__ probably need to be looked at later
@@ -96,6 +98,17 @@ class Move:
             end_file = self.ending_square % 8 + 1
             end = chr(97 + end_file - 1) + str(end_rank)
             self._ufci_format = start + end
+
+            if self.is_promotion:
+                if self.extra_piece_info == Move.KNIGHT:
+                    suffix = 'n'
+                elif self.extra_piece_info == Move.BISHOP:
+                    suffix = 'b'
+                elif self.extra_piece_info == Move.ROOK:
+                    suffix = 'r'
+                elif self.extra_piece_info == Move.QUEEN:
+                    suffix = 'q'
+                self._ufci_format += suffix
 
         return self._ufci_format
 
