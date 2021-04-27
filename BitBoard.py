@@ -1,6 +1,7 @@
 """
 !!!
 !!!
+I think we need to be able to filter the "generate all possible moves" code down to specific piece(s)
 NEED TO DISABLE OPPONENT'S ABILITY TO CASTLE IF WE TAKE THEIR ROOK!!! - Done
 Check that en passant captured piece identification works - do we need to do index +/- 8?
 !!!
@@ -15,6 +16,7 @@ Search function
 """
 
 from Move import Move
+from Decorators import log_execution_time
 from bcolors import bcolors
 from math import log2, inf
 import logging
@@ -34,6 +36,10 @@ log = logging.getLogger(__name__)
 
 all_move_history = {}
 all_move_details = {'Moves': 0, 'Captures': 0, 'En Passant': 0, 'Castles': 0, 'Promotions': 0}
+
+with open('execution_log.csv', 'w') as execution_log:
+    execution_log.write('Function Name, Elapsed Time\n')
+    pass
 
 
 class BitBoardChess:
@@ -350,6 +356,7 @@ class BitBoardChess:
     def EMPTY_SQUARES(self) -> int:
         return ~self.ALL_PIECES
 
+    @log_execution_time
     def player_is_in_check(self, player_color: int) -> bool:
         """
         Determines if any OPPONENT piece is threatening the THIS PLAYER'S King.
@@ -391,8 +398,8 @@ class BitBoardChess:
         elif player_color == BitBoardChess.BLACK:
             KING_SQUARE = next(BitBoardChess.generate_positions_from_mask(self.BLACK_KINGS))
             # ******************** Pawns ********************
-            check_board |= (self.WHITE_PAWNS << 7) & ~BitBoardChess.FILE_A
-            check_board |= (self.WHITE_PAWNS << 9) & ~BitBoardChess.FILE_H
+            check_board |= (self.WHITE_PAWNS << 7) & ~BitBoardChess.FILE_A & BitBoardChess.SIXTY_FOUR_BIT_MASK
+            check_board |= (self.WHITE_PAWNS << 9) & ~BitBoardChess.FILE_H & BitBoardChess.SIXTY_FOUR_BIT_MASK
             # ******************** Knights ********************
             for knight_square in BitBoardChess.generate_positions_from_mask(self.WHITE_KNIGHTS & self.KNIGHT_MOVE_MASKS[KING_SQUARE]):
                 check_board |= self.KNIGHT_MOVE_MASKS[knight_square]
@@ -632,6 +639,7 @@ class BitBoardChess:
         # return ur_dl_move_mask
         return self.generate_movement_mask(board_position=board_position, piece_color=piece_color, movement_mask=self.URDL_DIAGONAL_MASKS[board_position])
 
+    @log_execution_time
     def process_bishop_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the Bishop piece.
@@ -643,6 +651,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_rook_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the Rook piece.
@@ -654,6 +663,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_queen_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the Queen piece.
@@ -666,6 +676,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_king_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the king piece.
@@ -695,6 +706,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_pawn_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the pawn piece.
@@ -722,6 +734,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_pawn_capture_left(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the pawn piece.
@@ -745,6 +758,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_pawn_capture_right(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the pawn piece.
@@ -766,6 +780,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_pawn_capture_en_passant(self, board_position: int, piece_color: int) -> int:
         if not self.EN_PASSANT:
             return 0
@@ -793,6 +808,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_pawn_promotion_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the pawn piece.
@@ -815,6 +831,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_pawn_promotion_capture(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the pawn piece.
@@ -848,6 +865,7 @@ class BitBoardChess:
         # BitBoardChess.print_bitboard(move_mask)
         return move_mask
 
+    @log_execution_time
     def process_knight_move(self, board_position: int, piece_color: int) -> int:
         """
         Handles calculating all possible destination squares for the knight piece.
@@ -875,6 +893,7 @@ class BitBoardChess:
 
         return move_mask
 
+    @log_execution_time
     def process_castling_moves(self, piece_color: int) -> list:
         castling_options = []
         if piece_color == BitBoardChess.WHITE:
@@ -941,9 +960,11 @@ class BitBoardChess:
                         castling_options.append((2, Move.QUEEN))
         return castling_options
 
+    @log_execution_time
     def determine_if_move_is_capture(self, destination: int, piece_color: int) -> bool:
         return self.BLACK_PIECES & BitBoardChess.convert_position_to_mask(destination) if piece_color == BitBoardChess.WHITE else self.WHITE_PIECES & BitBoardChess.convert_position_to_mask(destination)
 
+    @log_execution_time
     def determine_captured_piece(self, board_position: int, piece_color: int) -> int:
         destination_mask = BitBoardChess.convert_position_to_mask(board_position)
         if piece_color == BitBoardChess.WHITE:
@@ -980,6 +1001,7 @@ class BitBoardChess:
 
         return Move.NONE
 
+    @log_execution_time
     def generate_all_possible_moves(self, piece_color: int) -> tuple:
         """
         """
@@ -1079,6 +1101,7 @@ class BitBoardChess:
         self.MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.CASTLING, self.EN_PASSANT)] = (all_possible_moves, threat_mask)
         return all_possible_moves, threat_mask
 
+    @log_execution_time
     def generate_all_legal_moves(self, piece_color: int) -> tuple:
         # color_label = 'WHITE' if piece_color == BitBoardChess.WHITE else 'BLACK'
         # log.critical(f'Generating all legal moves for {color_label}...')
@@ -1109,6 +1132,7 @@ class BitBoardChess:
         self.LEGAL_MOVE_CACHE[(piece_color, self.WHITE_PAWNS, self.WHITE_KNIGHTS, self.WHITE_BISHOPS, self.WHITE_ROOKS, self.WHITE_QUEENS, self.WHITE_KINGS, self.BLACK_PAWNS, self.BLACK_KNIGHTS, self.BLACK_BISHOPS, self.BLACK_ROOKS, self.BLACK_QUEENS, self.BLACK_KINGS, self.CASTLING, self.EN_PASSANT)] = all_legal_moves
         return all_legal_moves
 
+    @log_execution_time
     def apply_move(self, move: Move) -> None:
         """
         Do I need the capture checks? Can I just & ~ the whole thing?
@@ -1397,7 +1421,7 @@ def shannon_test_starting_position():
     fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 4
+    shannon_depth = 3
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
@@ -1493,10 +1517,10 @@ def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
 
 
 if __name__ == '__main__':
-    # shannon_test_starting_position()
+    shannon_test_starting_position()
     # shannon_test_castling()
     # shannon_test_promotions()
-    shannon_test_en_passant()
+    # shannon_test_en_passant()
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:

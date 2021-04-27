@@ -8,10 +8,10 @@ class Move:
     NONE = 0
     PAWN = 1
     KNIGHT = 2
-    BISHOP = 3
-    ROOK = 4
-    QUEEN = 5
-    KING = 6
+    BISHOP = 4
+    ROOK = 8
+    QUEEN = 16
+    KING = 32
 
     def __init__(self, starting_square: int = 0, ending_square: int = 0, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
         self.starting_square = starting_square
