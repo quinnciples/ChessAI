@@ -13,7 +13,7 @@ class Move:
     QUEEN = 16
     KING = 32
 
-    def __init__(self, starting_square: int = 0, ending_square: int = 0, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
+    def __init__(self, piece_type: int, starting_square: int = 0, ending_square: int = 0, is_capture: bool = False, is_en_passant: bool = False, is_check: bool = False, is_promotion: bool = False, is_castle: bool = False, extra_piece_info: int = 0):
         self.starting_square = starting_square
         self.ending_square = ending_square
         self.is_capture = is_capture
@@ -21,8 +21,8 @@ class Move:
         self.is_check = is_check
         self.is_promotion = is_promotion
         self.is_castle = is_castle
+        self.piece_type = piece_type
         self.extra_piece_info = extra_piece_info  # Stores type of piece being promoted to, captured, or direction of castling
-
         self._ufci_format = None
 
     def __str__(self):
