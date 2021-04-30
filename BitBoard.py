@@ -158,6 +158,9 @@ class BitBoardChess:
         self.BLACK_QUEENS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
         self.BLACK_KINGS = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
+    def next_player_turn(self) -> None:
+        self.PLAYER_TURN = BitBoardChess.WHITE if self.PLAYER_TURN == BitBoardChess.BLACK else BitBoardChess.BLACK
+
     def load_from_fen_string(self, fen_string: str) -> None:
         keys = fen_string.split(' ')
         board_string, player_turn, castling, en_passant, half_moves, full_moves = '', 'w', '-', '-', 0, 0
@@ -256,8 +259,8 @@ class BitBoardChess:
         self.HALF_MOVES = half_moves
         self.FULL_MOVES = full_moves
 
-        log.info(f'BLACK PIECES: {self.BLACK_PIECES:064b}')
-        log.info(f'WHITE PIECES: {self.WHITE_PIECES:064b}')
+        log.debug(f'BLACK PIECES: {self.BLACK_PIECES:064b}')
+        log.debug(f'WHITE PIECES: {self.WHITE_PIECES:064b}')
 
     def print_board(self) -> None:
         print('-' * 41)
@@ -909,12 +912,12 @@ class BitBoardChess:
                 if not self.ALL_PIECES & 6:
                     # and player would not be in check along the way
                     self.save_state()
-                    self.apply_move(Move(starting_square=60, ending_square=61))
+                    self.apply_move(Move(starting_square=60, ending_square=61, piece_type=Move.KING))
                     check = self.player_is_in_check(BitBoardChess.WHITE)
                     self.load_state()
                     if not check:
                         self.save_state()
-                        self.apply_move(Move(starting_square=60, ending_square=62))
+                        self.apply_move(Move(starting_square=60, ending_square=62, piece_type=Move.KING))
                         check = self.player_is_in_check(BitBoardChess.WHITE)
                         self.load_state()
                     if not check:
@@ -924,12 +927,12 @@ class BitBoardChess:
                 if not self.ALL_PIECES & 48:
                     #  and player would not be in check along the way
                     self.save_state()
-                    self.apply_move(Move(starting_square=60, ending_square=59))
+                    self.apply_move(Move(starting_square=60, ending_square=59, piece_type=Move.KING))
                     check = self.player_is_in_check(BitBoardChess.WHITE)
                     self.load_state()
                     if not check:
                         self.save_state()
-                        self.apply_move(Move(starting_square=60, ending_square=58))
+                        self.apply_move(Move(starting_square=60, ending_square=58, piece_type=Move.KING))
                         check = self.player_is_in_check(BitBoardChess.WHITE)
                         self.load_state()
                     if not check:
@@ -940,12 +943,12 @@ class BitBoardChess:
                 if not self.ALL_PIECES & 432345564227567616:
                     # and player would not be in check along the way
                     self.save_state()
-                    self.apply_move(Move(starting_square=4, ending_square=5))
+                    self.apply_move(Move(starting_square=4, ending_square=5, piece_type=Move.KING))
                     check = self.player_is_in_check(BitBoardChess.BLACK)
                     self.load_state()
                     if not check:
                         self.save_state()
-                        self.apply_move(Move(starting_square=4, ending_square=6))
+                        self.apply_move(Move(starting_square=4, ending_square=6, piece_type=Move.KING))
                         check = self.player_is_in_check(BitBoardChess.BLACK)
                         self.load_state()
                     if not check:
@@ -955,12 +958,12 @@ class BitBoardChess:
                 if not self.ALL_PIECES & 3458764513820540928:
                     #  and player would not be in check along the way
                     self.save_state()
-                    self.apply_move(Move(starting_square=4, ending_square=3))
+                    self.apply_move(Move(starting_square=4, ending_square=3, piece_type=Move.KING))
                     check = self.player_is_in_check(BitBoardChess.BLACK)
                     self.load_state()
                     if not check:
                         self.save_state()
-                        self.apply_move(Move(starting_square=4, ending_square=2))
+                        self.apply_move(Move(starting_square=4, ending_square=2, piece_type=Move.KING))
                         check = self.player_is_in_check(BitBoardChess.BLACK)
                         self.load_state()
                     if not check:
@@ -1208,11 +1211,11 @@ class BitBoardChess:
                 if self.WHITE_KINGS & end_mask and start_mask == 8 and end_mask == 2:
                     # Move the KING SIDE Rook to f1
                     log.debug('WHITE castling KING SIDE')
-                    self.apply_move(Move(starting_square=63, ending_square=61))
+                    self.apply_move(Move(starting_square=63, ending_square=61, piece_type=Move.ROOK))
                 elif self.WHITE_KINGS & end_mask and start_mask == 8 and end_mask == 32:
                     # Move the QUEEN SIDE Rook to d1
                     log.debug('WHITE castling QUEEN SIDE')
-                    self.apply_move(Move(starting_square=56, ending_square=59))
+                    self.apply_move(Move(starting_square=56, ending_square=59, piece_type=Move.ROOK))
                 else:
                     raise Exception(f'Invalid castling move {move}.')
 
@@ -1285,11 +1288,11 @@ class BitBoardChess:
                 if self.BLACK_KINGS & end_mask and start_mask == 576460752303423488 and end_mask == 144115188075855872:
                     # Move the KING SIDE Rook to f8
                     log.debug('BLACK castling KING SIDE')
-                    self.apply_move(Move(starting_square=7, ending_square=5))
+                    self.apply_move(Move(starting_square=7, ending_square=5, piece_type=Move.ROOK))
                 elif self.BLACK_KINGS & end_mask and start_mask == 576460752303423488 and end_mask == 2305843009213693952:
                     # Move the QUEEN SIDE Rook to d8
                     log.debug('BLACK castling QUEEN SIDE')
-                    self.apply_move(Move(starting_square=0, ending_square=3))
+                    self.apply_move(Move(starting_square=0, ending_square=3, piece_type=Move.ROOK))
                 else:
                     raise Exception(f'Invalid castling move {move}.')
 
@@ -1381,6 +1384,7 @@ class BitBoardChess:
         all_possible_moves = self.generate_all_legal_moves(piece_color=player_turn)
 
         if current_depth == 0:
+            all_move_history.clear()
             progress_number_of_moves = len(all_possible_moves)
             correct_results = get_stockfish_data(fen_string=fen_string_to_test, shannon_depth=depth_limit)
             start_time = datetime.now()
@@ -1437,29 +1441,10 @@ def shannon_test_starting_position():
     # fen_string = "rnbqkbnr/ppppppp1/8/7p/8/3P4/PPPKPPPP/RNBQ1BNR b kq - 1 2"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 5
+    shannon_depth = 4
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
-    print()
-
-def shannon_test_starting_position2():
-    chess_board = BitBoardChess()
-    fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    fen_string = "rnbqkbnr/pppppppp/8/8/8/3P4/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
-    fen_string = "rnbqkbnr/ppppppp1/8/7p/8/3P4/PPP1PPPP/RNBQKBNR w KQkq - 0 2"
-    # fen_string = "rnbqkbnr/ppppppp1/8/7p/8/3P4/PPPKPPPP/RNBQ1BNR b kq - 1 2"
-    chess_board.load_from_fen_string(fen_string=fen_string)
-    chess_board.print_board()
-    chess_board.apply_move(Move.from_ufci('e1d2'))
-    chess_board.print_board()
-    print(chess_board.player_is_in_check(BitBoardChess.WHITE))
-    print(chess_board.player_is_in_check(BitBoardChess.BLACK))
-    print(chess_board.generate_all_possible_moves(piece_color=BitBoardChess.BLACK))
-    shannon_depth = 2
-    # all_move_history.clear()
-    start_time = datetime.now()
-    # print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
     print()
 
 
@@ -1471,7 +1456,7 @@ def shannon_test_castling():
     # fen_string = "r3k3/8/8/8/8/8/8/R3KR1r b Qq - 3 2"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 5
+    shannon_depth = 4
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
@@ -1501,7 +1486,7 @@ def shannon_test_en_passant():
     # fen_string = "8/8/4k3/3pP3/6K1/8/8/8 b - - 5 4"
     chess_board.load_from_fen_string(fen_string=fen_string)
     chess_board.print_board()
-    shannon_depth = 8
+    shannon_depth = 4
     # all_move_history.clear()
     start_time = datetime.now()
     print(f'{chess_board.shannon_number(depth_limit=shannon_depth, player_turn=BitBoardChess.WHITE, fen_string_to_test=fen_string):0,} took {datetime.now() - start_time}.')
@@ -1553,9 +1538,9 @@ def get_stockfish_data(fen_string: str, shannon_depth: int) -> dict:
 
 if __name__ == '__main__':
     shannon_test_starting_position()
-    # shannon_test_castling()
-    # shannon_test_promotions()
-    # shannon_test_en_passant()
+    shannon_test_castling()
+    shannon_test_promotions()
+    shannon_test_en_passant()
 
     # import csv
     # with open('bitboard_version.csv', 'w', newline='') as f:
