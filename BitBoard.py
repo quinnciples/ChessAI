@@ -24,7 +24,7 @@ import configparser
 from datetime import datetime
 config = configparser.ConfigParser()
 config.read('config.ini')
-logging.basicConfig(level=logging.CRITICAL,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -1153,6 +1153,7 @@ class BitBoardChess:
         """
         Do I need the capture checks? Can I just & ~ the whole thing?
         """
+        log.debug(f'Processing move {move.ufci_format}...')
         # start_square = move.starting_square
         # end_square = move.ending_square
         start_mask = move.starting_mask
@@ -1166,14 +1167,14 @@ class BitBoardChess:
                 if self.WHITE_KINGS & start_mask:
                     self.CASTLING &= ~BitBoardChess.WHITE_KING_SIDE_CASTLE_FLAG
                     self.CASTLING &= ~BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG
-                    log.info('Disabling WHITE castling due to KING move.')
+                    log.debug('Disabling WHITE castling due to KING move.')
                 elif self.WHITE_ROOKS & start_mask:
                     if start_mask == 1:
                         self.CASTLING &= ~BitBoardChess.WHITE_KING_SIDE_CASTLE_FLAG
-                        log.info('Disabling WHITE KING SIDE castling due to ROOK move.')
+                        log.debug('Disabling WHITE KING SIDE castling due to ROOK move.')
                     elif start_mask == 128:
                         self.CASTLING &= ~BitBoardChess.WHITE_QUEEN_SIDE_CASTLE_FLAG
-                        log.info('Disabling WHITE QUEEN SIDE castling due to ROOK move.')
+                        log.debug('Disabling WHITE QUEEN SIDE castling due to ROOK move.')
 
             if not move.is_promotion:
                 for PIECE_BOARD in BitBoardChess.WHITE_PIECE_ATTRIBUTES:
@@ -1243,14 +1244,14 @@ class BitBoardChess:
                 if self.BLACK_KINGS & start_mask:
                     self.CASTLING &= ~BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG
                     self.CASTLING &= ~BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG
-                    log.info('Disabling BLACK castling due to KING move.')
+                    log.debug('Disabling BLACK castling due to KING move.')
                 elif self.BLACK_ROOKS & start_mask:
                     if start_mask == (1 << (63 - 7)):
                         self.CASTLING &= ~BitBoardChess.BLACK_KING_SIDE_CASTLE_FLAG
-                        log.info('Disabling BLACK KING SIDE castling due to ROOK move.')
+                        log.debug('Disabling BLACK KING SIDE castling due to ROOK move.')
                     elif start_mask == (1 << (63 - 0)):
                         self.CASTLING &= ~BitBoardChess.BLACK_QUEEN_SIDE_CASTLE_FLAG
-                        log.info('Disabling BLACK QUEEN SIDE castling due to ROOK move.')
+                        log.debug('Disabling BLACK QUEEN SIDE castling due to ROOK move.')
 
             if not move.is_promotion:
                 for PIECE_BOARD in BitBoardChess.BLACK_PIECE_ATTRIBUTES:
